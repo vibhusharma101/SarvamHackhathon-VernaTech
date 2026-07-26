@@ -28,6 +28,7 @@ from app.services.sarvam_intent import (
     translate_speech_to_english,
 )
 from app.services.scoring_service import run_scoring_pass
+from app.services.term_correction import correct_technical_terms
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,21 @@ QUESTIONS = [
     "What specific mechanism did you use?",
     "Tell me about a technical trade-off you made. What did you choose, what "
     "was the alternative, and what was the cost of your decision?",
+]
+
+# Which rubric criterion each question is actually asking about, by turn idx.
+# Mapped by NAME (matching api/sql/seed.py) rather than relying on the order
+# rows happen to come back from the DB in. scoring_service.py uses this to
+# gate evidence to the turn that answers each criterion — without it, all 4
+# answers get concatenated into one blob and a candidate who flatly refuses
+# the trade-off question still scores 4 on it, because the scorer finds
+# trade-off-shaped language in an earlier answer. Measured: that single
+# change took criterion accuracy from 75% to 94% on evals/score_eval.py.
+QUESTION_CRITERIA = [
+    "Production debugging",
+    "Data modelling",
+    "Concurrency / scale behaviour",
+    "Trade-off articulation",
 ]
 
 _DEVANAGARI_RE = re.compile(r"[ऀ-ॿ]")
@@ -257,6 +273,15 @@ async def interview_stream(websocket: WebSocket, session_id: str):
                     transcribe_speech_original(audio_bytes),
                 )
                 language_code = _detect_display_language(original_text, language_code)
+
+                # Repair technical terms the ASR mangled phonetically before
+                # anything reads them ("A-Disk" -> Redis, "Konkan" ->
+                # concurrency). Corrected text is what gets persisted, so the
+                # scorer AND the recruiter's transcript panel both see the
+                # real terms. Best-effort — falls back to the raw gloss on any
+                # failure (app/services/term_correction.py).
+                english_text = await correct_technical_terms(english_text)
+
                 t_asr_final = time.time()
                 await asyncio.to_thread(
                     _persist_turn,
