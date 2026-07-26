@@ -149,3 +149,26 @@ export type CandidateAck =
   | { type: "ack"; status: "processing" }
   | { type: "ack"; status: "done"; turn_idx: number }
   | { type: "error"; message: string };
+
+// ---- Fixed-question interview flow — real session/scoring integration ----
+
+export interface SessionTurn {
+  idx: number;
+  question: string | null;
+  original_text: string | null;
+  language_code: string | null;
+  english_text: string | null;
+  is_clarification: boolean;
+}
+
+export interface InterviewStartResponse {
+  session_id: string;
+  questions: string[];
+}
+
+export type InterviewServerEvent =
+  | { type: "question"; idx: number; total: number; text: string }
+  | { type: "ack"; status: "processing" }
+  | { type: "ack"; status: "done"; turn_idx: number }
+  | { type: "error"; message: string }
+  | { type: "complete"; session_id: string; scoring_pass_id: string | null; error?: string };

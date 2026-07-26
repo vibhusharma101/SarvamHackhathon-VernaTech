@@ -5,9 +5,11 @@ import type {
   CreateSessionRequest,
   CreateSessionResponse,
   HarnessPairResult,
+  InterviewStartResponse,
   Scorecard,
   SessionLatency,
   SessionListItem,
+  SessionTurn,
   WritebackResult,
 } from "./types";
 
@@ -33,6 +35,10 @@ export const api = {
   getScorecard: (sessionId: string) => request<Scorecard>(`/sessions/${sessionId}/scorecard`),
 
   getLatency: (sessionId: string) => request<SessionLatency>(`/sessions/${sessionId}/latency`),
+
+  getTurns: (sessionId: string) => request<SessionTurn[]>(`/sessions/${sessionId}/turns`),
+
+  startInterview: () => request<InterviewStartResponse>("/interview/start", { method: "POST" }),
 
   uploadFallbackAudio: async (sessionId: string, file: File) => {
     const res = await fetch(`${API_BASE}/sessions/${sessionId}/upload`, { method: "POST", body: file });

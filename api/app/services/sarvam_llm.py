@@ -56,6 +56,13 @@ async def _chat_completion(system_prompt: str, user_content: str) -> dict:
                 "model": "sarvam-30b",
                 "temperature": 0.1,
                 "response_format": {"type": "json_object"},
+                # Thinking mode is ON by default (reasoning_effort defaults
+                # to "low") — with it on, the model can put its answer in a
+                # reasoning field and leave `content` null, which crashes
+                # json.loads below. Found live via the scoring pipeline;
+                # same failure class app/services/sarvam_intent.py hit and
+                # fixed on the SDK side — this is the REST-call equivalent.
+                "reasoning_effort": None,
                 "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content},
@@ -63,7 +70,13 @@ async def _chat_completion(system_prompt: str, user_content: str) -> dict:
             },
         )
         resp.raise_for_status()
-        content = resp.json()["choices"][0]["message"]["content"]
+        message = resp.json()["choices"][0]["message"]
+        content = message.get("content")
+        if not content:
+            raise ValueError(
+                f"empty content from sarvam-30b (finish_reason={message.get('finish_reason')!r}, "
+                f"has_reasoning={'reasoning_content' in message})"
+            )
         return json.loads(content)
 
 

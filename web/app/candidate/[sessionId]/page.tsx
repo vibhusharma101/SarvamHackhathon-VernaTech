@@ -1,74 +1,80 @@
 "use client";
 
 import { use, useCallback, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { startMicCapture, type MicCaptureHandle } from "@/lib/audio";
-import { CandidateSocket } from "@/lib/intentWs";
+import { InterviewSocket } from "@/lib/interviewWs";
 
-type Status = "connecting" | "idle" | "recording" | "processing" | "done" | "error";
+type Status = "connecting" | "ready" | "recording" | "processing" | "complete" | "error";
 
 const STATUS_COPY: Record<Status, string> = {
   connecting: "Connecting…",
-  idle: "Ready",
+  ready: "Ready",
   recording: "Recording",
-  processing: "Processing",
-  done: "Sent",
+  processing: "Processing…",
+  complete: "Complete",
   error: "Error",
 };
 
 const STATUS_DOT: Record<Status, string> = {
   connecting: "bg-zinc-300 dark:bg-zinc-700",
-  idle: "bg-zinc-300 dark:bg-zinc-700",
+  ready: "bg-zinc-300 dark:bg-zinc-700",
   recording: "bg-red-500",
   processing: "bg-amber-500",
-  done: "bg-emerald-500",
+  complete: "bg-emerald-500",
   error: "bg-red-500",
 };
 
+interface QuestionState {
+  idx: number;
+  total: number;
+  text: string;
+}
+
 export default function CandidatePage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = use(params);
+  const router = useRouter();
 
-  const [sessionActive, setSessionActive] = useState(false);
-  const [status, setStatus] = useState<Status>("idle");
+  const [started, setStarted] = useState(false);
+  const [status, setStatus] = useState<Status>("connecting");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [turnCount, setTurnCount] = useState(0);
+  const [question, setQuestion] = useState<QuestionState | null>(null);
+  const [scoringPassId, setScoringPassId] = useState<string | null>(null);
 
-  const socketRef = useRef<CandidateSocket | null>(null);
+  const socketRef = useRef<InterviewSocket | null>(null);
   const micRef = useRef<MicCaptureHandle | null>(null);
 
-  const startSession = useCallback(() => {
-    const socket = new CandidateSocket(sessionId);
-    socket.onOpen(() => setStatus("idle"));
+  const startInterview = useCallback(() => {
+    setStarted(true);
+    setStatus("connecting");
+    setErrorMessage(null);
+
+    const socket = new InterviewSocket(sessionId);
+    socket.onOpen(() => setStatus((s) => (s === "connecting" ? "ready" : s)));
+    socket.onQuestion((q) => {
+      setQuestion({ idx: q.idx, total: q.total, text: q.text });
+      setStatus("ready");
+    });
     socket.onAck((ack) => {
       if (ack.status === "processing") setStatus("processing");
-      if (ack.status === "done") {
-        setStatus("done");
-        setTurnCount(ack.turn_idx + 1);
-      }
+      // "done" is immediately followed by the next question or the complete
+      // event — no separate UI state needed for it.
     });
     socket.onError((message) => {
       setStatus("error");
       setErrorMessage(message);
     });
+    socket.onComplete((c) => {
+      setStatus("complete");
+      setScoringPassId(c.scoring_pass_id);
+      if (c.error) setErrorMessage(c.error);
+    });
     socketRef.current = socket;
-    setSessionActive(true);
-    setStatus("connecting");
-    setErrorMessage(null);
   }, [sessionId]);
 
-  const endSession = useCallback(() => {
-    micRef.current?.stop();
-    micRef.current = null;
-    socketRef.current?.close();
-    socketRef.current = null;
-    setSessionActive(false);
-    setStatus("idle");
-    setErrorMessage(null);
-    setTurnCount(0);
-  }, []);
-
   const toggleRecording = useCallback(async () => {
-    if (status === "connecting" || status === "processing") return;
+    if (status === "connecting" || status === "processing" || status === "complete") return;
 
     if (status === "recording") {
       micRef.current?.stop();
@@ -91,28 +97,52 @@ export default function CandidatePage({ params }: { params: Promise<{ sessionId:
   const isBusy = status === "connecting" || status === "processing";
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col items-center justify-center gap-10 p-8">
+    <main className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center gap-8 p-8">
       <div className="text-center">
         <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">Technical screen</p>
         <p className="mt-1 text-xs text-zinc-400">{sessionId.slice(0, 8)}</p>
       </div>
 
-      {!sessionActive ? (
+      {!started ? (
         <button
           type="button"
-          onClick={startSession}
+          onClick={startInterview}
           className="rounded-full bg-black px-8 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-black"
         >
-          Start session
+          Start interview
         </button>
+      ) : status === "complete" ? (
+        <div className="flex flex-col items-center gap-3 text-center">
+          <p className="text-lg font-medium">Interview complete</p>
+          <p className="text-sm text-zinc-500">
+            {scoringPassId ? "Your answers have been scored." : "Answers saved — scoring couldn't complete."}
+          </p>
+          {errorMessage && <p className="text-xs text-red-500">{errorMessage}</p>}
+          <button
+            type="button"
+            onClick={() => router.push("/console")}
+            className="mt-2 rounded-full border border-zinc-300 px-5 py-2 text-sm font-medium dark:border-zinc-700"
+          >
+            View in recruiter console
+          </button>
+        </div>
       ) : (
         <>
+          {question && (
+            <div className="max-w-md text-center">
+              <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+                Question {question.idx + 1} of {question.total}
+              </p>
+              <p className="mt-2 text-base leading-relaxed">{question.text}</p>
+            </div>
+          )}
+
           <div className="relative flex h-28 w-28 items-center justify-center">
             {isRecording && <span className="absolute inset-0 animate-ping rounded-full bg-red-500/30" />}
             <button
               type="button"
               onClick={toggleRecording}
-              disabled={isBusy}
+              disabled={isBusy || !question}
               aria-label={isRecording ? "Stop recording" : "Start recording"}
               className={`relative flex h-24 w-24 items-center justify-center rounded-full transition-colors disabled:opacity-40 ${
                 isRecording ? "bg-red-500" : "bg-black dark:bg-white"
@@ -131,19 +161,8 @@ export default function CandidatePage({ params }: { params: Promise<{ sessionId:
               <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[status]}`} />
               <span className="text-sm text-zinc-600 dark:text-zinc-400">{STATUS_COPY[status]}</span>
             </div>
-            <p className="min-h-[1.25rem] text-xs text-zinc-400">
-              {status === "done" && `${turnCount} turn${turnCount === 1 ? "" : "s"} sent`}
-              {status === "error" && errorMessage}
-            </p>
+            {status === "error" && <p className="min-h-[1.25rem] text-xs text-red-500">{errorMessage}</p>}
           </div>
-
-          <button
-            type="button"
-            onClick={endSession}
-            className="text-xs text-zinc-400 transition-colors hover:text-zinc-600 hover:underline dark:hover:text-zinc-300"
-          >
-            End session
-          </button>
         </>
       )}
     </main>

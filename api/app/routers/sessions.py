@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, UploadFile
 
 from app.db import get_client
 from app.models import CreateSessionRequest, CreateSessionResponse
+from app.routers.interview import QUESTIONS
 from app.services.latency import session_latency
 from app.services.sarvam_stt import translate_segment
 
@@ -77,6 +78,29 @@ def get_scorecard(session_id: str):
         "overall": overall,
         "language_proficiency": proficiency.data[0] if proficiency.data else None,
     }
+
+
+@router.get("/sessions/{session_id}/turns")
+def get_turns(session_id: str):
+    """Per-turn transcript — original language AND the English gloss the
+    scorer actually reads, side by side. This is the recruiter-facing eval
+    view: what the candidate said in their own words, not just the
+    translation. `question` is zipped in from the fixed interview question
+    list by idx (api/app/routers/interview.py) — turns from that flow map
+    1:1 to it; older/other flows just won't have a matching question."""
+    db = get_client()
+    turns = db.table("turn").select("*").eq("session_id", session_id).order("idx").execute()
+    return [
+        {
+            "idx": t["idx"],
+            "question": QUESTIONS[t["idx"]] if 0 <= t["idx"] < len(QUESTIONS) else None,
+            "original_text": t.get("asr_original_text"),
+            "language_code": t.get("asr_lang"),
+            "english_text": t.get("asr_english_gloss"),
+            "is_clarification": t.get("is_clarification", False),
+        }
+        for t in turns.data
+    ]
 
 
 @router.post("/sessions/{session_id}/upload")

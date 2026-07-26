@@ -14,6 +14,7 @@ guessed from docs, since none of this can be exercised end-to-end without a
 real SARVAM_API_KEY.
 """
 
+import asyncio
 import base64
 import io
 import json
@@ -39,6 +40,13 @@ DOMAIN_HINT_PROMPT = (
     "race condition, cache, queue, schema, index, replica, sharding. "
     "Transcribe these terms exactly as written above when spoken."
 )
+
+# Found live: with no VAD/end-of-utterance signal configured, a socket that
+# never gets a clean "final" frame (e.g. a near-silent hold) can sit in
+# recv() forever — reproduced against the real API, not theoretical. Every
+# recv() below is bounded so one bad turn can't hang a WS connection for the
+# rest of the session.
+RECV_TIMEOUT_SECONDS = 20
 
 
 class SpeechTranslationError(Exception):
@@ -88,7 +96,10 @@ async def translate_speech_to_english(pcm_bytes: bytes, sample_rate: int = 16000
         # defensively rather than assuming the very first recv() is the
         # transcript.
         for _ in range(10):
-            response = await ws.recv()
+            try:
+                response = await asyncio.wait_for(ws.recv(), timeout=RECV_TIMEOUT_SECONDS)
+            except asyncio.TimeoutError:
+                raise SpeechTranslationError("timed out waiting for a translation from Sarvam")
             if response.type == "data":
                 return response.data.transcript
             if response.type == "error":
@@ -121,7 +132,10 @@ async def transcribe_speech_original(pcm_bytes: bytes, sample_rate: int = 16000)
         await ws.flush()
 
         for _ in range(10):
-            response = await ws.recv()
+            try:
+                response = await asyncio.wait_for(ws.recv(), timeout=RECV_TIMEOUT_SECONDS)
+            except asyncio.TimeoutError:
+                raise SpeechTranslationError("timed out waiting for a transcript from Sarvam")
             if response.type == "data":
                 return response.data.transcript, response.data.language_code
             if response.type == "error":
