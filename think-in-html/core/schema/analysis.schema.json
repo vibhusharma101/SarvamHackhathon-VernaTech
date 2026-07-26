@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Think-In-HTML Lesson",
+  "description": "A composed lesson: the AI chooses a teaching strategy and assembles an ordered list of teaching blocks that best express THIS code/text. Structure emerges from the blocks — there is no fixed layout.",
+  "type": "object",
+  "required": ["schemaVersion", "meta", "blocks"],
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "meta": {
+      "type": "object",
+      "required": ["title", "mode", "source", "generatedAt"],
+      "properties": {
+        "title": { "type": "string" },
+        "mode": { "enum": ["code", "thinking", "text"] },
+        "source": { "type": "string" },
+        "generatedAt": { "type": "string" },
+        "audience": { "enum": ["beginner", "dev"], "default": "beginner" },
+        "skin": { "enum": ["aurora", "storybook", "blueprint", "terminal"], "default": "aurora" }
+      }
+    },
+    "strategy": {
+      "type": "object",
+      "description": "The AI's teaching plan — why it chose this approach. Shown subtly / useful for debugging.",
+      "properties": {
+        "approach": { "type": "string" },
+        "analogy": { "type": "string" },
+        "why": { "type": "string" }
+      }
+    },
+    "design": {
+      "type": "object",
+      "description": "An OPTIONAL bespoke visual theme the AI authors for THIS subject — it becomes the default 'Custom' skin (the 4 preset skins stay available in the picker). The renderer applies it safely: `vars` set CSS custom properties, `css` is injected onto a <style> via textContent (never innerHTML). No external URLs/fonts/images — the page is self-contained and the CSP blocks remote fetches. Design should not be limited to the presets: compose the look the subject deserves.",
+      "properties": {
+        "name": { "type": "string", "description": "Label for the custom theme shown in the skin picker, e.g. 'Neon Circuit'." },
+        "mood": { "type": "string", "description": "Short rationale for the visual direction. Documentation only — not rendered." },
+        "vars": {
+          "type": "object",
+          "description": "CSS custom properties to set for the custom theme (e.g. --bg, --grad-hot, --font-display, --radius, --mascot). Keys must be --kebab-case names; values are plain CSS values (no ';', '{', '}', or external url()).",
+          "patternProperties": { "^--[a-zA-Z0-9-]+$": { "type": "string" } },
+          "additionalProperties": false
+        },
+        "css": { "type": "string", "description": "Freeform stylesheet applied on top of the base styles. Target component/wrapper hooks like `.tih-block.tih-<blockType>`, `.hook`, `.b-title`, `.glass`, `.code-window`, `.aha`. CSS only (no JS); external url()/@import are stripped and blocked by the CSP." }
+      }
+    },
+    "blocks": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Ordered teaching blocks. Pick the types and order that teach THIS subject best.",
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "enum": ["hook", "analogy", "concept", "code", "steps", "flow", "architecture", "compare", "aha", "quiz", "recap", "glossary"]
+          },
+          "title": { "type": "string" },
+          "emoji": { "type": "string" },
+          "className": { "type": "string", "description": "[any] optional extra class(es) for the block's wrapper, so `design.css` can target this specific block. Sanitized to [A-Za-z0-9 _-] at render time." },
+
+          "headline": { "type": "string", "description": "[hook] big opening line" },
+          "body": { "type": "string", "description": "[hook|concept] teacher-voice text" },
+          "technical": { "type": "string", "description": "[concept] optional deeper detail" },
+          "kicker": { "type": "string", "description": "[hook] small label above headline" },
+
+          "realWorld": { "type": "string", "description": "[analogy] the real-world metaphor, described plainly" },
+          "mapping": {
+            "type": "array",
+            "description": "[analogy] rows mapping real-world things to code things",
+            "items": {
+              "type": "object",
+              "required": ["from", "to"],
+              "properties": { "from": { "type": "string" }, "to": { "type": "string" }, "note": { "type": "string" } }
+            }
+          },
+
+          "lang": { "type": "string", "description": "[code|concept|steps] code language label" },
+          "code": { "type": "string", "description": "[code|concept] source snippet" },
+          "explain": { "type": "string", "description": "[code] what the snippet does, teacher voice" },
+
+          "steps": {
+            "type": "array",
+            "description": "[steps] narrated step-by-step",
+            "items": {
+              "type": "object",
+              "required": ["title", "body"],
+              "properties": { "title": { "type": "string" }, "body": { "type": "string" }, "code": { "type": "string" }, "lang": { "type": "string" } }
+            }
+          },
+
+          "nodes": {
+            "type": "array",
+            "description": "[flow] boxes in the diagram",
+            "items": {
+              "type": "object",
+              "required": ["id", "label"],
+              "properties": { "id": { "type": "string" }, "label": { "type": "string" }, "kind": { "enum": ["file", "function", "step", "section", "class", "module"] }, "note": { "type": "string" } }
+            }
+          },
+          "edges": {
+            "type": "array",
+            "description": "[flow] arrows between nodes",
+            "items": {
+              "type": "object",
+              "required": ["from", "to"],
+              "properties": { "from": { "type": "string" }, "to": { "type": "string" }, "label": { "type": "string" } }
+            }
+          },
+          "rootId": { "type": "string", "description": "[flow] entry-point node id" },
+
+          "groups": {
+            "type": "array",
+            "description": "[architecture] layered groups of real files. Order top→bottom (e.g. UI → actions → domain → data). Edges reference item ids.",
+            "items": {
+              "type": "object",
+              "required": ["label", "items"],
+              "properties": {
+                "label": { "type": "string", "description": "layer name, e.g. 'Domain logic (src/lib/epr)'" },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "file"],
+                    "properties": {
+                      "id": { "type": "string" },
+                      "file": { "type": "string", "description": "real path, e.g. src/lib/epr/pricing.ts" },
+                      "role": { "type": "string", "description": "short description of what the file does" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+
+          "left": { "type": "object", "description": "[compare] left side { label, body, code?, lang? }" },
+          "right": { "type": "object", "description": "[compare] right side { label, body, code?, lang? }" },
+
+          "insight": { "type": "string", "description": "[aha] the key realization" },
+
+          "questions": {
+            "type": "array",
+            "description": "[quiz] check-understanding questions",
+            "items": {
+              "type": "object",
+              "required": ["q", "choices", "answer", "explain"],
+              "properties": {
+                "q": { "type": "string" },
+                "choices": { "type": "array", "items": { "type": "string" }, "minItems": 2 },
+                "answer": { "type": "integer", "minimum": 0 },
+                "explain": { "type": "string" }
+              }
+            }
+          },
+
+          "points": { "type": "array", "items": { "type": "string" }, "description": "[recap] key takeaways" },
+
+          "terms": {
+            "type": "array",
+            "description": "[glossary] terms to define",
+            "items": {
+              "type": "object",
+              "required": ["term", "plain"],
+              "properties": { "term": { "type": "string" }, "plain": { "type": "string" }, "technical": { "type": "string" } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

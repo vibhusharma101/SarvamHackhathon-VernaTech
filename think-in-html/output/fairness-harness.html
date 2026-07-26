@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">
+<title>Signal or Noise — How Vernatech's Fairness Harness Actually Decides</title>
+<style>
+  :root{
+    --bg:#0b0d0c; --panel:#121514; --panel2:#171b19; --line:rgba(232,163,61,.16); --line2:rgba(232,163,61,.32);
+    --ink:#eef1ee; --soft:#a8b0ab; --muted:#6b7570;
+    --amber:#e8a33d; --amber2:#f5c576; --mint:#4fd1a5; --red:#e8623d;
+    --mono:ui-monospace,'SF Mono','Cascadia Code','JetBrains Mono',Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --ease:cubic-bezier(.2,.8,.2,1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      repeating-linear-gradient(0deg, rgba(232,163,61,.035) 0 1px, transparent 1px 28px),
+      linear-gradient(180deg,var(--bg),#0e100f);
+    color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  }
+  .wrap{max-width:960px;margin:0 auto;padding:0 22px}
+  code,.m{font-family:var(--mono)}
+  ::selection{background:rgba(232,163,61,.3)}
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.001s !important; transition-duration:.001s !important} }
+
+  .top{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:10px;padding:12px 22px;
+       border-bottom:1px solid var(--line);background:rgba(11,13,12,.86);backdrop-filter:blur(10px)}
+  .top .tick{width:8px;height:8px;border-radius:2px;background:var(--amber);transform:rotate(45deg)}
+  .top b{font-size:.85rem;letter-spacing:.02em}
+  .top .p{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+  .top .scroll{margin-left:auto;width:120px;height:3px;background:var(--panel2);border-radius:2px;overflow:hidden}
+  .top .scroll i{display:block;height:100%;width:0%;background:var(--amber)}
+  @media(max-width:600px){.top .p{display:none}}
+
+  .hero{padding:80px 22px 40px}
+  .hero .eye{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);margin-bottom:18px}
+  .hero h1{font-size:clamp(2rem,5.2vw,3.4rem);line-height:1.08;letter-spacing:-.02em;font-weight:700;max-width:20ch}
+  .hero h1 span{color:var(--amber2)}
+  .hero .lede{margin-top:22px;max-width:62ch;color:var(--soft);font-size:clamp(1rem,1.9vw,1.15rem)}
+  .facts{margin-top:28px;display:flex;gap:10px;flex-wrap:wrap}
+  .fact{font-family:var(--mono);font-size:.74rem;color:var(--soft);border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:7px 11px}
+  .fact b{color:var(--amber)}
+
+  section{padding:40px 0}
+  h2{font-size:clamp(1.4rem,3vw,2rem);letter-spacing:-.01em;font-weight:700}
+  .sub{margin-top:10px;color:var(--soft);max-width:64ch}
+  .reveal{opacity:0;transform:translateY(22px);transition:.6s var(--ease)}
+  .reveal.in{opacity:1;transform:none}
+
+  /* ── the instrument ── */
+  .instrument{margin-top:26px;border:1px solid var(--line2);border-radius:10px;background:var(--panel);overflow:hidden}
+  .instrument-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);background:rgba(232,163,61,.04)}
+  .instrument-head .d{width:8px;height:8px;border-radius:50%;background:var(--amber)}
+  .instrument-head .t{font-family:var(--mono);font-size:.74rem;color:var(--soft);letter-spacing:.02em}
+  .presets{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+  .presets button{font-family:var(--mono);font-size:.68rem;color:var(--ink);background:var(--panel2);border:1px solid var(--line2);
+    border-radius:5px;padding:5px 9px;cursor:pointer;transition:.15s}
+  .presets button:hover{border-color:var(--amber);color:var(--amber2)}
+
+  .rows{padding:6px 16px 16px}
+  .row{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+  .row:last-child{border-bottom:none}
+  @media(max-width:720px){.row{grid-template-columns:1fr;gap:8px}}
+  .row .name{font-size:.88rem;font-weight:600}
+  .row .name .def{display:block;font-size:.72rem;color:var(--muted);font-weight:400;margin-top:2px}
+
+  .runs-block{display:flex;flex-direction:column;gap:5px}
+  .runs-label{font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .runs{display:flex;gap:4px}
+  .runchip{width:30px;height:30px;border-radius:6px;border:1px solid var(--line2);background:var(--panel2);
+    font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--soft);cursor:pointer;transition:.12s;
+    display:flex;align-items:center;justify-content:center}
+  .runchip:hover{border-color:var(--amber)}
+  .runchip.insuff{color:var(--red);border-color:rgba(232,98,61,.5);background:rgba(232,98,61,.08)}
+  .runchip[data-v="5"]{background:rgba(79,209,165,.14);border-color:rgba(79,209,165,.5);color:var(--mint)}
+  .runchip[data-v="1"]{background:rgba(232,98,61,.1);border-color:rgba(232,98,61,.4)}
+
+  .agg{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:66px}
+  .agg .badge{font-family:var(--mono);font-weight:800;font-size:1.15rem;padding:3px 10px;border-radius:6px;border:1px solid var(--line2)}
+  .agg .badge.insuff{color:var(--red);border-color:rgba(232,98,61,.5);font-size:.68rem;padding:5px 8px}
+  .agg .badge.lowc{position:relative}
+  .agg .lc-tag{font-family:var(--mono);font-size:.58rem;color:var(--amber2);margin-top:3px}
+  .diffcell{font-family:var(--mono);font-weight:800;font-size:1rem;text-align:center;min-width:42px}
+
+  .readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);
+    border-top:1px solid var(--line2)}
+  .stat{background:var(--panel);padding:16px 18px}
+  .stat .k{font-family:var(--mono);font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .stat .v{font-family:var(--mono);font-size:1.5rem;font-weight:800;margin-top:6px}
+  .stat .v.warn{color:var(--amber2)}
+  .stat .v.ok{color:var(--mint)}
+
+  .verdict{padding:18px 20px;display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:.9rem;font-weight:700;border-top:1px solid var(--line2)}
+  .verdict.exceeds{background:rgba(232,163,61,.1);color:var(--amber2)}
+  .verdict.within{background:rgba(79,209,165,.1);color:var(--mint)}
+  .verdict.none{background:rgba(255,255,255,.02);color:var(--muted)}
+  .verdict .flag{font-size:1.1rem}
+
+  /* needle strip: visualizes MAD vs pooled variance on one axis */
+  .needle-wrap{padding:18px 20px 22px;border-top:1px solid var(--line)}
+  .needle-label{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.64rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+  .needle-track{position:relative;height:34px;background:var(--panel2);border-radius:6px;border:1px solid var(--line2);overflow:visible}
+  .needle-noise{position:absolute;top:0;bottom:0;left:0;background:rgba(79,209,165,.18);border-right:2px dashed rgba(79,209,165,.6);border-radius:6px 0 0 6px}
+  .needle-mad{position:absolute;top:-6px;bottom:-6px;width:3px;background:var(--amber);box-shadow:0 0 8px rgba(232,163,61,.6);transition:left .25s var(--ease)}
+  .needle-mad::after{content:attr(data-tag);position:absolute;top:-20px;left:50%;transform:translateX(-50%);
+    font-family:var(--mono);font-size:.62rem;color:var(--amber2);white-space:nowrap}
+
+  /* code panel */
+  .codepanel{margin-top:14px;background:#0e100f;border:1px solid var(--line2);border-radius:8px;overflow:hidden}
+  .codepanel .cap{font-family:var(--mono);font-size:.7rem;color:var(--muted);padding:9px 14px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.02)}
+  .codepanel pre{padding:16px;overflow-x:auto;font-family:var(--mono);font-size:.78rem;line-height:1.65;color:#cfd6d1}
+  .codepanel .c-kw{color:var(--amber2)} .codepanel .c-str{color:var(--mint)} .codepanel .c-com{color:var(--muted);font-style:italic}
+  .codepanel .c-fn{color:#8fd6ff}
+
+  .aha{margin:20px 0;padding:22px 24px;border-left:3px solid var(--amber);background:rgba(232,163,61,.06);border-radius:0 8px 8px 0}
+  .aha .tag{font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--amber2);margin-bottom:6px}
+  .aha p{font-size:1.05rem;font-weight:600;max-width:56ch}
+
+  .glossary{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:16px}
+  .gterm{border:1px solid var(--line);border-radius:8px;padding:14px 16px;background:var(--panel)}
+  .gterm b{font-family:var(--mono);font-size:.82rem;color:var(--amber2)}
+  .gterm p{font-size:.82rem;color:var(--soft);margin-top:5px}
+
+  .recap{margin-top:10px;border:1px solid var(--line2);border-radius:10px;padding:22px 24px;background:var(--panel)}
+  .recap ul{margin-top:10px;padding-left:0;list-style:none}
+  .recap li{position:relative;padding-left:22px;margin-top:8px;font-size:.92rem;color:var(--soft)}
+  .recap li::before{content:"▸";position:absolute;left:0;color:var(--amber)}
+
+  footer{padding:36px 22px 60px;text-align:center}
+  footer .credit{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+  footer .credit a{color:var(--amber2);text-decoration:none;border-bottom:1px dotted rgba(232,163,61,.5)}
+  footer .credit a:hover{color:var(--amber)}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <span class="tick"></span>
+  <b>Vernatech · Fairness Harness</b>
+  <span class="p">app/services/stats.py</span>
+  <div class="scroll"><i id="scrollbar"></i></div>
+</div>
+
+<div class="wrap">
+  <div class="hero">
+    <div class="eye">Field instrument</div>
+    <h1>A language gap only means something if it's <span>bigger than the noise.</span></h1>
+    <p class="lede">
+      Vernatech scores the same technical answer once in English, once in the candidate's own
+      language. If the scores differ, is that real bias — or is it just how much the scorer's
+      own judgment wobbles from run to run anyway? This page is the actual formula from
+      <code>stats.py</code>, live, so you can drag scores yourself and watch it decide.
+    </p>
+    <div class="facts">
+      <div class="fact"><b>3</b> self-consistency runs per criterion, per language</div>
+      <div class="fact"><b>MAD</b> = mean absolute difference, English vs. vernacular</div>
+      <div class="fact">flagged when <b>MAD &gt; pooled run-variance</b></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <section class="reveal" id="sec-instrument">
+    <h2>Try it: click the run chips</h2>
+    <p class="sub">
+      Each criterion was scored <b>3 times independently</b> (self-consistency), in each
+      language. Click a chip to cycle its score 1→5, then to <span style="color:var(--red)">✗</span>
+      (insufficient evidence). Everything below — the aggregate, the gap, the verdict —
+      recomputes live using the exact same code as the real backend.
+    </p>
+
+    <div class="instrument">
+      <div class="instrument-head">
+        <span class="d"></span>
+        <span class="t">harness_pair — live</span>
+        <div class="presets">
+          <button id="preset-p1" type="button">Load real pair: P1 (flagged)</button>
+          <button id="preset-testing" type="button">Load real pair: Testing (within noise)</button>
+          <button id="preset-reset" type="button">Reset</button>
+        </div>
+      </div>
+
+      <div class="rows" id="rows"></div>
+
+      <div class="readout">
+        <div class="stat"><div class="k">Competence MAD</div><div class="v" id="stat-mad">—</div></div>
+        <div class="stat"><div class="k">Largest single gap</div><div class="v" id="stat-gap">—</div></div>
+        <div class="stat"><div class="k">Excluded criteria</div><div class="v" id="stat-excluded">—</div></div>
+        <div class="stat"><div class="k">Pooled run-variance</div><div class="v" id="stat-variance">—</div></div>
+      </div>
+
+      <div class="needle-wrap">
+        <div class="needle-label"><span>0.0</span><span>scale (score points)</span><span>2.0</span></div>
+        <div class="needle-track">
+          <div class="needle-noise" id="needle-noise"></div>
+          <div class="needle-mad" id="needle-mad" data-tag="MAD"></div>
+        </div>
+      </div>
+
+      <div class="verdict none" id="verdict">Adjust the runs above to see a verdict.</div>
+    </div>
+  </section>
+
+  <section class="reveal">
+    <h2>The real code behind it</h2>
+    <p class="sub">Two functions, read straight from the repo. This page's JS is a line-for-line port of both.</p>
+
+    <div class="codepanel">
+      <div class="cap">api/app/services/aggregate.py — turns 3 raw runs into one score</div>
+      <pre>def aggregate(runs: list[RunResult]) -&gt; AggregatedResult:
+    scored = [r for r in runs if r.status == "scored"]
+
+    <span class="c-com"># majority insufficient -&gt; the criterion itself is insufficient</span>
+    if len(scored) &lt; <span class="c-str">2</span>:
+        return AggregatedResult(status=<span class="c-str">"insufficient_evidence"</span>, score=<span class="c-kw">None</span>,
+                                 low_consistency=len(scored) == <span class="c-str">1</span>)
+
+    vals = sorted(r.score <span class="c-kw">for</span> r <span class="c-kw">in</span> scored)
+    median = vals[len(vals)//<span class="c-str">2</span>] <span class="c-kw">if</span> len(vals) % <span class="c-str">2</span> <span class="c-kw">else</span> ceil((vals[<span class="c-str">0</span>]+vals[<span class="c-str">1</span>])/<span class="c-str">2</span>)
+    low_consistency = (max(vals) - min(vals)) &gt;= <span class="c-str">2</span> <span class="c-kw">or</span> len(scored) == <span class="c-str">2</span>
+    <span class="c-kw">return</span> AggregatedResult(status=<span class="c-str">"scored"</span>, score=median, low_consistency=low_consistency)</pre>
+    </div>
+
+    <div class="codepanel">
+      <div class="cap">api/app/services/stats.py — is the English/vernacular gap real?</div>
+      <pre><span class="c-kw">def</span> <span class="c-fn">compute_harness_stats</span>(english_scores, vernacular_scores, ...):
+    <span class="c-com"># Rule 1: a criterion refused (None) in EITHER language is excluded</span>
+    diffable = [c <span class="c-kw">for</span> c <span class="c-kw">in</span> common <span class="c-kw">if</span> english_scores[c] <span class="c-kw">is not</span> <span class="c-kw">None</span>
+                <span class="c-kw">and</span> vernacular_scores[c] <span class="c-kw">is not</span> <span class="c-kw">None</span>]
+    diffs = [abs(english_scores[c] - vernacular_scores[c]) <span class="c-kw">for</span> c <span class="c-kw">in</span> diffable]
+    competence_mad = sum(diffs) / len(diffs)          <span class="c-com"># Rule 1</span>
+    max_observed_gap = max(diffs)                      <span class="c-com"># Rule 2: per-criterion, not the mean</span>
+
+<span class="c-kw">def</span> <span class="c-fn">noise_verdict</span>(stats):
+    pooled_variance = (stats.english_run_variance + stats.vernacular_run_variance) / <span class="c-str">2</span>
+    <span class="c-kw">if</span> stats.competence_mad &lt;= pooled_variance:
+        <span class="c-kw">return</span> <span class="c-str">"language difference is within scorer noise"</span>
+    <span class="c-kw">return</span> <span class="c-str">"language difference exceeds scorer noise — disclose plainly"</span>   <span class="c-com"># Rule 3</span></pre>
+    </div>
+  </section>
+
+  <div class="aha">
+    <div class="tag">The aha</div>
+    <p>The harness doesn't ask "did the score change?" — every LLM judge wobbles run to run
+    even scoring the <em>same</em> language twice. It asks "did it move more than it already
+    wobbles on its own?" A gap smaller than that is just the instrument's hand shaking.
+    Only a gap bigger than its own noise floor gets called bias.</p>
+  </div>
+
+  <section class="reveal">
+    <h2>Glossary</h2>
+    <div class="glossary">
+      <div class="gterm"><b>Competence MAD</b><p>Mean of |English score − vernacular score| across every criterion scored in both languages.</p></div>
+      <div class="gterm"><b>Excluded criteria</b><p>A criterion where either language came back "insufficient evidence" isn't diffable — it's dropped from MAD entirely, not treated as a zero gap.</p></div>
+      <div class="gterm"><b>Run variance</b><p>Statistical variance across the 3 self-consistency runs for one criterion, averaged across all criteria — the scorer's own baseline jitter.</p></div>
+      <div class="gterm"><b>Low consistency</b><p>Flagged when the 3 runs spread by 2+ points, or when only 2 of 3 even agreed on scoring at all.</p></div>
+    </div>
+  </section>
+
+  <div class="recap">
+    <h2 style="font-size:1.15rem">Recap</h2>
+    <ul>
+      <li>Every criterion is scored 3× independently, in each language — that's the noise floor.</li>
+      <li>MAD only ever compares criteria both languages actually managed to score.</li>
+      <li>A gap is only "bias" if it's bigger than the scorer's own run-to-run wobble.</li>
+      <li>Nothing here is hidden after the fact — the harness discloses the verdict either way.</li>
+    </ul>
+  </div>
+</div>
+
+<footer>
+  <div class="credit">Explainer generated with <a href="https://github.com/vibhusharma101/Think-In-HTML" target="_blank" rel="noopener">Think-In-HTML</a> · reads app/services/stats.py directly</div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  var CRITERIA = [
+    {id:"debug", name:"Production debugging", def:"symptom + method + fix"},
+    {id:"data",  name:"Data modelling",        def:"schema + reasoning + rejected alternative"},
+    {id:"scale", name:"Concurrency / scale behaviour", def:"mechanism + instance + why"},
+    {id:"trade", name:"Trade-off articulation", def:"decision + alternative + cost"}
+  ];
+
+  // run state: 1-5 or null (insufficient). cycles 1->2->3->4->5->null->1
+  var state = {en: {}, hi: {}};
+
+  function defaultRuns(){ return [4,4,4]; }
+  CRITERIA.forEach(function(c){
+    state.en[c.id] = defaultRuns();
+    state.hi[c.id] = defaultRuns();
+  });
+
+  // ---- exact port of aggregate.py ----
+  function aggregate(runs){
+    var scored = runs.filter(function(v){ return v !== null; });
+    if (scored.length < 2){
+      return {status:"insufficient_evidence", score:null, lowConsistency: scored.length === 1};
+    }
+    var vals = scored.slice().sort(function(a,b){return a-b;});
+    var median;
+    if (vals.length % 2 === 1){ median = vals[Math.floor(vals.length/2)]; }
+    else { median = Math.ceil((vals[0]+vals[1])/2); }
+    var lowConsistency = (Math.max.apply(null, vals) - Math.min.apply(null, vals)) >= 2 || scored.length === 2;
+    return {status:"scored", score:median, lowConsistency:lowConsistency};
+  }
+
+  // sample variance, matching Python's statistics.variance (n-1 denominator)
+  function sampleVariance(vals){
+    if (vals.length < 2) return null;
+    var mean = vals.reduce(function(a,b){return a+b;},0) / vals.length;
+    var sq = vals.reduce(function(a,b){return a + Math.pow(b-mean,2);},0);
+    return sq / (vals.length - 1);
+  }
+
+  // ---- exact port of stats.py ----
+  function computeHarnessStats(enAgg, hiAgg, enRuns, hiRuns){
+    var ids = CRITERIA.map(function(c){return c.id;});
+    var diffable = ids.filter(function(id){ return enAgg[id].score !== null && hiAgg[id].score !== null; });
+    var excluded = ids.length - diffable.length;
+    var mad = null, maxGap = null;
+    if (diffable.length){
+      var diffs = diffable.map(function(id){ return Math.abs(enAgg[id].score - hiAgg[id].score); });
+      mad = diffs.reduce(function(a,b){return a+b;},0) / diffs.length;
+      maxGap = Math.max.apply(null, diffs);
+    }
+    function avgVariance(runsById){
+      var vs = ids.map(function(id){
+        var scored = runsById[id].filter(function(v){ return v !== null; });
+        return scored.length >= 2 ? sampleVariance(scored) : null;
+      }).filter(function(v){ return v !== null; });
+      return vs.length ? vs.reduce(function(a,b){return a+b;},0)/vs.length : 0;
+    }
+    var enVar = avgVariance(enRuns), hiVar = avgVariance(hiRuns);
+    var pooled = (enVar + hiVar) / 2;
+    var verdict = mad === null ? "none" : (mad <= pooled ? "within" : "exceeds");
+    return {mad:mad, maxGap:maxGap, excluded:excluded, enVar:enVar, hiVar:hiVar, pooled:pooled, verdict:verdict};
+  }
+
+  // ---- render ----
+  var rowsEl = document.getElementById("rows");
+
+  function chip(lang, critId, i){
+    var el = document.createElement("button");
+    el.type = "button";
+    el.className = "runchip";
+    el.addEventListener("click", function(){
+      var cur = state[lang][critId][i];
+      var next = cur === null ? 1 : (cur >= 5 ? null : cur + 1);
+      state[lang][critId][i] = next;
+      render();
+    });
+    return el;
+  }
+
+  function buildRows(){
+    rowsEl.innerHTML = "";
+    CRITERIA.forEach(function(c){
+      var row = document.createElement("div");
+      row.className = "row";
+
+      var nameCell = document.createElement("div");
+      nameCell.className = "name";
+      nameCell.textContent = c.name;
+      var def = document.createElement("span");
+      def.className = "def";
+      def.textContent = c.def;
+      nameCell.appendChild(def);
+
+      var enBlock = document.createElement("div"); enBlock.className = "runs-block";
+      var enLabel = document.createElement("div"); enLabel.className = "runs-label"; enLabel.textContent = "English ×3";
+      var enRuns = document.createElement("div"); enRuns.className = "runs";
+      for (var i=0;i<3;i++){ enRuns.appendChild(chip("en", c.id, i)); }
+      enBlock.appendChild(enLabel); enBlock.appendChild(enRuns);
+
+      var hiBlock = document.createElement("div"); hiBlock.className = "runs-block";
+      var hiLabel = document.createElement("div"); hiLabel.className = "runs-label"; hiLabel.textContent = "Vernacular ×3";
+      var hiRuns = document.createElement("div"); hiRuns.className = "runs";
+      for (var j=0;j<3;j++){ hiRuns.appendChild(chip("hi", c.id, j)); }
+      hiBlock.appendChild(hiLabel); hiBlock.appendChild(hiRuns);
+
+      var diffCell = document.createElement("div");
+      diffCell.className = "diffcell";
+      diffCell.id = "diff-" + c.id;
+
+      row.appendChild(nameCell);
+      row.appendChild(enBlock);
+      row.appendChild(hiBlock);
+      row.appendChild(diffCell);
+      rowsEl.appendChild(row);
+    });
+  }
+
+  function render(){
+    var enAgg = {}, hiAgg = {};
+    CRITERIA.forEach(function(c){
+      enAgg[c.id] = aggregate(state.en[c.id]);
+      hiAgg[c.id] = aggregate(state.hi[c.id]);
+    });
+
+    // update chips
+    CRITERIA.forEach(function(c){
+      ["en","hi"].forEach(function(lang){
+        var container = rowsEl.querySelectorAll('.row')[CRITERIA.indexOf(c)];
+        var runsBlocks = container.querySelectorAll(".runs");
+        var block = lang === "en" ? runsBlocks[0] : runsBlocks[1];
+        var chips = block.querySelectorAll(".runchip");
+        state[lang][c.id].forEach(function(v, idx){
+          var el = chips[idx];
+          if (v === null){ el.textContent = "✗"; el.className = "runchip insuff"; el.removeAttribute("data-v"); }
+          else { el.textContent = String(v); el.className = "runchip"; el.setAttribute("data-v", String(v)); }
+        });
+      });
+
+      var diffEl = document.getElementById("diff-" + c.id);
+      var e = enAgg[c.id], h = hiAgg[c.id];
+      if (e.score !== null && h.score !== null){
+        var d = Math.abs(e.score - h.score);
+        diffEl.textContent = (d === 0 ? "±0" : "±" + d);
+        diffEl.style.color = d >= 2 ? "var(--red)" : (d === 1 ? "var(--amber2)" : "var(--mint)");
+      } else {
+        diffEl.textContent = "—";
+        diffEl.style.color = "var(--muted)";
+      }
+    });
+
+    var stats = computeHarnessStats(enAgg, hiAgg, state.en, state.hi);
+
+    document.getElementById("stat-mad").textContent = stats.mad === null ? "—" : stats.mad.toFixed(2);
+    document.getElementById("stat-gap").textContent = stats.maxGap === null ? "—" : (stats.maxGap + " pt" + (stats.maxGap===1?"":"s"));
+    document.getElementById("stat-excluded").textContent = stats.excluded;
+    document.getElementById("stat-variance").textContent = stats.pooled.toFixed(2);
+
+    var madEl = document.getElementById("stat-mad");
+    var varEl = document.getElementById("stat-variance");
+    madEl.className = "v " + (stats.verdict === "exceeds" ? "warn" : (stats.verdict === "within" ? "ok" : ""));
+
+    // needle: scale 0..2 score points across the track width
+    var SCALE_MAX = 2.0;
+    var noisePct = Math.min(100, (stats.pooled / SCALE_MAX) * 100);
+    var madPct = stats.mad === null ? 0 : Math.min(100, (stats.mad / SCALE_MAX) * 100);
+    document.getElementById("needle-noise").style.width = noisePct + "%";
+    var needle = document.getElementById("needle-mad");
+    needle.style.left = "calc(" + madPct + "% - 1px)";
+    needle.setAttribute("data-tag", stats.mad === null ? "" : "MAD " + stats.mad.toFixed(2));
+
+    var verdictEl = document.getElementById("verdict");
+    if (stats.verdict === "none"){
+      verdictEl.className = "verdict none";
+      verdictEl.innerHTML = '<span class="flag">—</span> No criteria are scored in both languages yet.';
+    } else if (stats.verdict === "within"){
+      verdictEl.className = "verdict within";
+      verdictEl.innerHTML = '<span class="flag">✓</span> MAD (' + stats.mad.toFixed(2) + ') is within scorer run-to-run noise (' + stats.pooled.toFixed(2) + '). Not flagged as bias.';
+    } else {
+      verdictEl.className = "verdict exceeds";
+      verdictEl.innerHTML = '<span class="flag">⚠</span> MAD (' + stats.mad.toFixed(2) + ') exceeds scorer noise (' + stats.pooled.toFixed(2) + ') — disclosed, not hidden.';
+    }
+  }
+
+  // ---- presets, reconstructed from the real harness_pair rows this page's product produced ----
+  document.getElementById("preset-p1").addEventListener("click", function(){
+    // Real pair "P1 - backend engineer (EN vs HI)": every criterion scored a
+    // flat, internally-consistent 4 in English and 5 in Hindi — MAD 1.00,
+    // zero self-consistency variance either side, correctly flagged.
+    CRITERIA.forEach(function(c){ state.en[c.id] = [4,4,4]; state.hi[c.id] = [5,5,5]; });
+    render();
+  });
+  document.getElementById("preset-testing").addEventListener("click", function(){
+    // Real pair "Testing": 3 criteria matched exactly; Data modelling came
+    // back insufficient in Hindi (translation-mangled) so it's excluded, not
+    // counted as a gap — MAD lands at 0.00, within noise.
+    state.en.debug = [4,4,4]; state.hi.debug = [4,4,4];
+    state.en.data  = [3,4,5]; state.hi.data  = [null,null,3];
+    state.en.scale = [4,4,4]; state.hi.scale = [4,4,3];
+    state.en.trade = [4,4,4]; state.hi.trade = [4,4,4];
+    render();
+  });
+  document.getElementById("preset-reset").addEventListener("click", function(){
+    CRITERIA.forEach(function(c){ state.en[c.id] = defaultRuns(); state.hi[c.id] = defaultRuns(); });
+    render();
+  });
+
+  buildRows();
+  render();
+
+  // reveal-on-scroll + scroll progress
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ if (e.isIntersecting) e.target.classList.add("in"); });
+  }, {threshold:.12});
+  document.querySelectorAll(".reveal").forEach(function(el){ io.observe(el); });
+
+  window.addEventListener("scroll", function(){
+    var h = document.documentElement;
+    var pct = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+    document.getElementById("scrollbar").style.width = (isFinite(pct) ? pct : 0) + "%";
+  }, {passive:true});
+})();
+</script>
+</body>
+</html>

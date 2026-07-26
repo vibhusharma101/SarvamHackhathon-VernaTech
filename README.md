@@ -2,6 +2,10 @@
 
 > "Score the engineering, not the English — and prove it."
 
+📊 **[Interactive explainer: how the fairness harness decides signal vs. noise →](https://vibhusharma101.github.io/SarvamHackhathon-VernaTech/)**
+— drag real self-consistency scores yourself and watch `app/services/stats.py`'s actual MAD/variance
+formula compute the verdict live. Generated with [Think-In-HTML](https://github.com/vibhusharma101/Think-In-HTML).
+
 Full spec lives in [`PRD-vernacular-technical-screening.md`](./PRD-vernacular-technical-screening.md) (product) and
 [`TRD-vernacular-technical-screening.md`](./TRD-vernacular-technical-screening.md) (engineering, Rev 2 — this is the
 one to build from). This README covers setup only.
