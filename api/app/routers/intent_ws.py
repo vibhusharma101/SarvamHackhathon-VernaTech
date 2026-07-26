@@ -9,11 +9,13 @@ client-generated session_id — acceptable because there's no persistence
 requirement and a single Railway instance serves the demo.
 """
 
+import asyncio
 import json
 import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.db import get_client
 from app.models import IntentBroadcast, StructuredIntent
 from app.services.sarvam_intent import SpeechTranslationError, extract_intent, translate_speech_to_english
 
@@ -39,6 +41,22 @@ async def _broadcast_intent(session_id: str, broadcast: IntentBroadcast) -> None
             sockets.discard(socket)
 
 
+def _persist_turn(broadcast: IntentBroadcast) -> None:
+    # Best-effort: a DB hiccup shouldn't break the live demo path, which
+    # already got its answer via the console broadcast.
+    try:
+        get_client().table("intent_turn").insert(
+            {
+                "session_id": broadcast.session_id,
+                "turn_idx": broadcast.turn_idx,
+                "english_text": broadcast.english_text,
+                "intent": broadcast.intent.model_dump(),
+            }
+        ).execute()
+    except Exception:
+        logger.exception("failed to persist intent_turn for session %s", broadcast.session_id)
+
+
 @router.websocket("/ws/candidate/{session_id}")
 async def candidate_stream(websocket: WebSocket, session_id: str):
     await websocket.accept()
@@ -47,6 +65,9 @@ async def candidate_stream(websocket: WebSocket, session_id: str):
     try:
         while True:
             message = await websocket.receive()
+
+            if message["type"] == "websocket.disconnect":
+                return
 
             if message.get("bytes") is not None:
                 buffer.extend(message["bytes"])
@@ -77,6 +98,7 @@ async def candidate_stream(websocket: WebSocket, session_id: str):
                         intent=StructuredIntent(**intent_dict),
                     )
                     await _broadcast_intent(session_id, broadcast)
+                    await asyncio.to_thread(_persist_turn, broadcast)
                     await websocket.send_json({"type": "ack", "status": "done", "turn_idx": turn_idx})
                 except SpeechTranslationError as e:
                     await websocket.send_json({"type": "error", "message": str(e)})
@@ -101,7 +123,9 @@ async def console_stream(websocket: WebSocket, session_id: str):
         while True:
             # No client -> server messages required (contract v0); just hold
             # the connection open and detect disconnects.
-            await websocket.receive()
+            message = await websocket.receive()
+            if message["type"] == "websocket.disconnect":
+                return
     except WebSocketDisconnect:
         pass
     finally:

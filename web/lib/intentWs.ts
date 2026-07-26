@@ -10,10 +10,15 @@ export class CandidateSocket {
   private socket: WebSocket;
   private ackHandlers: ((ack: Extract<CandidateAck, { type: "ack" }>) => void)[] = [];
   private errorHandlers: ((message: string) => void)[] = [];
+  private openHandlers: (() => void)[] = [];
 
   constructor(sessionId: string) {
     this.socket = new WebSocket(`${WS_BASE}/ws/candidate/${sessionId}`);
     this.socket.binaryType = "arraybuffer";
+
+    this.socket.addEventListener("open", () => {
+      this.openHandlers.forEach((h) => h());
+    });
 
     this.socket.addEventListener("message", (msg) => {
       if (typeof msg.data !== "string") return;
@@ -24,6 +29,17 @@ export class CandidateSocket {
         this.errorHandlers.forEach((h) => h(parsed.message));
       }
     });
+  }
+
+  /** The socket starts in CONNECTING state — sendAudioFrame/sendStop throw
+   * synchronously if called before it's actually open. Callers must wait for
+   * this before letting the user record. */
+  onOpen(handler: () => void) {
+    if (this.socket.readyState === WebSocket.OPEN) {
+      handler();
+    } else {
+      this.openHandlers.push(handler);
+    }
   }
 
   onAck(handler: (ack: Extract<CandidateAck, { type: "ack" }>) => void) {
@@ -37,13 +53,15 @@ export class CandidateSocket {
   /** Send one binary PCM16 frame — call from startMicCapture's onFrame while
    * the hold-to-talk button is down. No changes needed to lib/audio.ts. */
   sendAudioFrame(frame: ArrayBuffer) {
-    this.socket.send(frame);
+    if (this.socket.readyState === WebSocket.OPEN) this.socket.send(frame);
   }
 
   /** Call on button release — triggers the one-shot STT+translate+intent
    * pass on the backend. */
   sendStop() {
-    this.socket.send(JSON.stringify({ type: "stop" }));
+    if (this.socket.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify({ type: "stop" }));
+    }
   }
 
   close() {

@@ -30,6 +30,10 @@ class SpeechTranslationError(Exception):
     pass
 
 
+class IntentExtractionError(Exception):
+    pass
+
+
 def wrap_pcm16_as_wav(pcm_bytes: bytes, sample_rate: int = 16000, channels: int = 1) -> bytes:
     """Wraps raw 16-bit signed little-endian mono PCM (exactly what
     `web/lib/audio.ts`'s `floatTo16BitPCM` emits) into a minimal WAV
@@ -89,15 +93,28 @@ async def extract_intent(english_text: str) -> dict:
     response = await _client.chat.completions(
         model="sarvam-30b",
         temperature=0.1,
+        # Thinking mode is ON by default (reasoning_effort defaults to "low").
+        # With it on, the model can put its answer in reasoning_content and
+        # leave `content` as None — explicitly disabling it is required, not
+        # optional, per the contract.
+        reasoning_effort=None,
         messages=[
             {"role": "system", "content": INTENT_SYSTEM_PROMPT},
             {"role": "user", "content": english_text},
         ],
+        # The Python SDK's chat.completions() has no direct response_format
+        # kwarg, but it does accept one through request_options — verified
+        # against the installed sarvamai package, not guessed.
+        request_options={"additional_body_parameters": {"response_format": {"type": "json_object"}}},
     )
-    content = response.choices[0].message.content.strip()
-    # The SDK has no JSON-mode flag (unlike the raw REST chat endpoint the
-    # rest of the app uses) — prompted for raw JSON, but strip fences
-    # defensively in case the model doesn't listen.
+    content = response.choices[0].message.content
+    if not content:
+        raise IntentExtractionError(
+            f"empty intent response from sarvam-30b (finish_reason={response.choices[0].finish_reason!r})"
+        )
+    content = content.strip()
+    # Prompted for raw JSON; strip fences defensively in case the model
+    # wraps it anyway despite JSON mode.
     if content.startswith("```"):
         content = content.strip("`")
         if content.startswith("json"):

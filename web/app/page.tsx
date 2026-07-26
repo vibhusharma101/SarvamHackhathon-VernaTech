@@ -6,12 +6,15 @@ export default function Home() {
       <div>
         <h1 className="text-2xl font-semibold">Vernacular Technical Screening</h1>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Score the engineering, not the English. Recruiter console and fairness harness below;
-          candidate screens are linked per session at <code>/screen/[sessionId]</code>.
+          Score the engineering, not the English. Start a candidate session below, watch it live in
+          the recruiter console, then run the fairness harness once sessions are recorded.
         </p>
       </div>
-      <div className="flex gap-3">
-        <Link href="/console" className="rounded-full bg-black px-5 py-2 text-sm font-medium text-white dark:bg-white dark:text-black">
+      <div className="flex flex-wrap gap-3">
+        <Link href="/candidate" className="rounded-full bg-black px-5 py-2 text-sm font-medium text-white dark:bg-white dark:text-black">
+          Start candidate session
+        </Link>
+        <Link href="/console" className="rounded-full border border-zinc-300 px-5 py-2 text-sm font-medium dark:border-zinc-700">
           Recruiter console
         </Link>
         <Link href="/harness" className="rounded-full border border-zinc-300 px-5 py-2 text-sm font-medium dark:border-zinc-700">
