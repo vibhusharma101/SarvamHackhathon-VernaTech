@@ -33,6 +33,7 @@ interface QuestionState {
 }
 
 const LANGUAGE_NAMES: Record<string, string> = {
+  hinglish: "Hinglish",
   "en-IN": "English",
   "hi-IN": "Hindi",
   "te-IN": "Telugu",

@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 export default function CandidateEntryPage() {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [consented, setConsented] = useState(false);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,15 +42,30 @@ export default function CandidateEntryPage() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !starting && start()}
+            onKeyDown={(e) => e.key === "Enter" && consented && !starting && start()}
             placeholder="Your full name"
             autoFocus
             className="w-full border border-[#E8E8E3] bg-white px-4 py-3 text-center text-base text-[#111111] outline-none focus:border-[#0F5D5A]"
           />
+
+          <label className="flex items-start gap-3 border border-[#E8E8E3] bg-white p-4 text-left text-xs text-[#5C5C5C]">
+            <input
+              type="checkbox"
+              checked={consented}
+              onChange={(e) => setConsented(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[#0F5D5A]"
+            />
+            <span>
+              I understand my spoken answers will be <strong className="text-[#111111]">recorded</strong> and used
+              for this evaluation, and may also be used internally for our fairness harness and model evals. No
+              audio is shared outside this evaluation.
+            </span>
+          </label>
+
           <button
             type="button"
             onClick={start}
-            disabled={starting}
+            disabled={starting || !consented}
             className="bg-[#0F5D5A] px-8 py-3 text-sm font-medium text-white transition-colors hover:bg-[#0B4B48] disabled:opacity-50"
           >
             {starting ? "Starting secure session…" : "Begin technical screen"}
