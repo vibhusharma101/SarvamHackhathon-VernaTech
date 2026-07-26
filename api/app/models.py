@@ -124,5 +124,7 @@ class IntentBroadcast(BaseModel):
     type: Literal["intent"] = "intent"
     session_id: str
     turn_idx: int
+    original_text: str
+    language_code: str
     english_text: str
     intent: StructuredIntent

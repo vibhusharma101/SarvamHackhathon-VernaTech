@@ -110,6 +110,8 @@ export interface IntentBroadcast {
   type: "intent";
   session_id: string;
   turn_idx: number;
+  original_text: string;
+  language_code: string;
   english_text: string;
   intent: StructuredIntent;
 }

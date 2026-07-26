@@ -81,6 +81,38 @@ async def translate_speech_to_english(pcm_bytes: bytes, sample_rate: int = 16000
     raise SpeechTranslationError("socket closed before a transcript or error frame arrived")
 
 
+async def transcribe_speech_original(pcm_bytes: bytes, sample_rate: int = 16000) -> tuple[str, str]:
+    """Separate STT call in mode=transcribe (not translate) to capture the
+    candidate's exact original-language words plus the detected language,
+    alongside the English gloss from translate_speech_to_english. Sarvam's
+    translate-mode response only contains the English transcript — no
+    original-language text field — so this is a second round-trip on the
+    same audio, meant to run concurrently with the translate call
+    (asyncio.gather in the caller), not serially."""
+    if not pcm_bytes:
+        raise SpeechTranslationError("empty audio buffer")
+
+    wav_bytes = wrap_pcm16_as_wav(pcm_bytes, sample_rate=sample_rate)
+    audio_b64 = base64.b64encode(wav_bytes).decode("ascii")
+
+    async with _client.speech_to_text_streaming.connect(
+        model="saaras:v3",
+        mode="transcribe",
+        language_code="unknown",
+    ) as ws:
+        await ws.transcribe(audio=audio_b64, encoding="audio/wav", sample_rate=sample_rate)
+        await ws.flush()
+
+        for _ in range(10):
+            response = await ws.recv()
+            if response.type == "data":
+                return response.data.transcript, response.data.language_code
+            if response.type == "error":
+                raise SpeechTranslationError(f"{response.data.code}: {response.data.error}")
+
+    raise SpeechTranslationError("socket closed before a transcript or error frame arrived")
+
+
 INTENT_SYSTEM_PROMPT = """Extract structured intent from this technical screening answer.
 Return ONLY this JSON, no prose, no markdown fences:
 {"action": "short verb phrase for what they did", "key_entities": ["technology or concept names mentioned"], "summary": "one sentence summary"}"""

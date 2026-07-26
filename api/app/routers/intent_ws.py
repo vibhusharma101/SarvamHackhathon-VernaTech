@@ -17,7 +17,12 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.db import get_client
 from app.models import IntentBroadcast, StructuredIntent
-from app.services.sarvam_intent import SpeechTranslationError, extract_intent, translate_speech_to_english
+from app.services.sarvam_intent import (
+    SpeechTranslationError,
+    extract_intent,
+    transcribe_speech_original,
+    translate_speech_to_english,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +54,8 @@ def _persist_turn(broadcast: IntentBroadcast) -> None:
             {
                 "session_id": broadcast.session_id,
                 "turn_idx": broadcast.turn_idx,
+                "original_text": broadcast.original_text,
+                "language_code": broadcast.language_code,
                 "english_text": broadcast.english_text,
                 "intent": broadcast.intent.model_dump(),
             }
@@ -85,7 +92,16 @@ async def candidate_stream(websocket: WebSocket, session_id: str):
                 await websocket.send_json({"type": "ack", "status": "processing"})
 
                 try:
-                    english_text = await translate_speech_to_english(bytes(buffer))
+                    audio_bytes = bytes(buffer)
+                    # Sarvam has no single call that returns both the English
+                    # gloss and the original-language transcript — two
+                    # separate STT round-trips on the same audio, run
+                    # concurrently rather than serially to not double the
+                    # per-turn latency.
+                    english_text, (original_text, language_code) = await asyncio.gather(
+                        translate_speech_to_english(audio_bytes),
+                        transcribe_speech_original(audio_bytes),
+                    )
                     intent_dict = await extract_intent(english_text)
 
                     turn_idx = _turn_counters.get(session_id, 0)
@@ -94,6 +110,8 @@ async def candidate_stream(websocket: WebSocket, session_id: str):
                     broadcast = IntentBroadcast(
                         session_id=session_id,
                         turn_idx=turn_idx,
+                        original_text=original_text,
+                        language_code=language_code,
                         english_text=english_text,
                         intent=StructuredIntent(**intent_dict),
                     )

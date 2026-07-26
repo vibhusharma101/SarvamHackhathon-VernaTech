@@ -41,9 +41,17 @@ export default function LiveConsolePage({ params }: { params: Promise<{ sessionI
                 ))}
               </div>
             )}
-            <blockquote className="mt-2 border-l-2 border-zinc-300 pl-2 text-xs italic text-zinc-500 dark:border-zinc-700">
-              {broadcast.english_text}
-            </blockquote>
+            <div className="mt-3 flex flex-col gap-1.5 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-500 dark:bg-zinc-800">
+                  {broadcast.language_code}
+                </span>
+                <p className="text-xs text-zinc-500">{broadcast.original_text}</p>
+              </div>
+              <blockquote className="border-l-2 border-zinc-300 pl-2 text-xs italic text-zinc-500 dark:border-zinc-700">
+                {broadcast.english_text}
+              </blockquote>
+            </div>
           </div>
         ))}
         {intents.length === 0 && <p className="text-sm text-zinc-400">Waiting for the candidate to answer…</p>}
