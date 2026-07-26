@@ -97,3 +97,24 @@ export type ServerEvent =
   | { type: "turn_complete"; turn_idx: number }
   | { type: "screen_complete"; session_id: string }
   | { type: "error"; code: string; recoverable: boolean };
+
+// ---- Intent MVP (contract v0) — parallel slice, does not touch the types above ----
+
+export interface StructuredIntent {
+  action: string;
+  key_entities: string[];
+  summary: string;
+}
+
+export interface IntentBroadcast {
+  type: "intent";
+  session_id: string;
+  turn_idx: number;
+  english_text: string;
+  intent: StructuredIntent;
+}
+
+export type CandidateAck =
+  | { type: "ack"; status: "processing" }
+  | { type: "ack"; status: "done"; turn_idx: number }
+  | { type: "error"; message: string };

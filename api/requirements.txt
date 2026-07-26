@@ -8,3 +8,4 @@ websockets
 numpy
 pydantic
 httpx
+sarvamai

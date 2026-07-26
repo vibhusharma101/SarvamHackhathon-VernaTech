@@ -2,7 +2,7 @@
 `web/lib/types.ts` — no codegen today (TRD §10)."""
 
 from enum import Enum
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel
 
@@ -110,3 +110,19 @@ class WritebackResult(BaseModel):
     beeceptor_status: int
     slack_status: Optional[int] = None
     payload: dict
+
+
+# ---- Intent MVP (contract v0) — parallel slice, does not touch the models above ----
+
+class StructuredIntent(BaseModel):
+    action: str
+    key_entities: list[str]
+    summary: str
+
+
+class IntentBroadcast(BaseModel):
+    type: Literal["intent"] = "intent"
+    session_id: str
+    turn_idx: int
+    english_text: str
+    intent: StructuredIntent
