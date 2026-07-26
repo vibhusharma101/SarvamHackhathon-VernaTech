@@ -50,7 +50,11 @@ def _persist_turn(broadcast: IntentBroadcast) -> None:
     # Best-effort: a DB hiccup shouldn't break the live demo path, which
     # already got its answer via the console broadcast.
     try:
-        get_client().table("intent_turn").insert(
+        # upsert, not insert: _turn_counters is in-memory and resets on every
+        # process restart (dev --reload, prod redeploy), but session_id
+        # survives restarts since it's just a UUID in the URL — a fresh
+        # counter can collide with a row already persisted pre-restart.
+        get_client().table("intent_turn").upsert(
             {
                 "session_id": broadcast.session_id,
                 "turn_idx": broadcast.turn_idx,
@@ -58,7 +62,8 @@ def _persist_turn(broadcast: IntentBroadcast) -> None:
                 "language_code": broadcast.language_code,
                 "english_text": broadcast.english_text,
                 "intent": broadcast.intent.model_dump(),
-            }
+            },
+            on_conflict="session_id,turn_idx",
         ).execute()
     except Exception:
         logger.exception("failed to persist intent_turn for session %s", broadcast.session_id)

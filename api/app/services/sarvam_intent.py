@@ -25,6 +25,21 @@ from app.config import SARVAM_API_KEY
 
 _client = AsyncSarvamAI(api_subscription_key=SARVAM_API_KEY)
 
+# Domain hint for technical-term transcription accuracy (MySQL, OOM, etc.).
+# The installed sarvamai==0.1.28 SDK has no typed `prompt` kwarg on the
+# streaming connect() methods, but connect()'s own source merges
+# request_options["additional_query_parameters"] straight into the WS
+# handshake query string — verified by reading the implementation, not just
+# the signature — so this is a real query param sent to Sarvam, not a no-op.
+# Whether Sarvam's server honors it is confirmed live in Stage 3, not assumed.
+DOMAIN_HINT_PROMPT = (
+    "This is a technical screening interview for a backend engineering role. "
+    "Expect technical terms including: MySQL, Postgres, Redis, Kafka, API, "
+    "SQL, JSON, OOM (out of memory), concurrency, latency, throughput, "
+    "race condition, cache, queue, schema, index, replica, sharding. "
+    "Transcribe these terms exactly as written above when spoken."
+)
+
 
 class SpeechTranslationError(Exception):
     pass
@@ -64,6 +79,7 @@ async def translate_speech_to_english(pcm_bytes: bytes, sample_rate: int = 16000
         mode="translate",
         input_audio_codec="wav",
         sample_rate=str(sample_rate),
+        request_options={"additional_query_parameters": {"prompt": DOMAIN_HINT_PROMPT}},
     ) as ws:
         await ws.translate(audio=audio_b64, encoding="audio/wav", sample_rate=sample_rate)
         await ws.flush()
@@ -99,6 +115,7 @@ async def transcribe_speech_original(pcm_bytes: bytes, sample_rate: int = 16000)
         model="saaras:v3",
         mode="transcribe",
         language_code="unknown",
+        request_options={"additional_query_parameters": {"prompt": DOMAIN_HINT_PROMPT}},
     ) as ws:
         await ws.transcribe(audio=audio_b64, encoding="audio/wav", sample_rate=sample_rate)
         await ws.flush()
@@ -113,9 +130,29 @@ async def transcribe_speech_original(pcm_bytes: bytes, sample_rate: int = 16000)
     raise SpeechTranslationError("socket closed before a transcript or error frame arrived")
 
 
-INTENT_SYSTEM_PROMPT = """Extract structured intent from this technical screening answer.
-Return ONLY this JSON, no prose, no markdown fences:
-{"action": "short verb phrase for what they did", "key_entities": ["technology or concept names mentioned"], "summary": "one sentence summary"}"""
+# Every category describes WHAT was described, never HOW WELL it was
+# described — no fluency/clarity/articulateness category, ever. That
+# separation from language proficiency is the entire point of this product;
+# a category that correlates with confident phrasing quietly reintroduces
+# the exact bias the fairness harness exists to rule out. Single-label,
+# reused verbatim from the earlier PRD's 4 validated rubric criteria.
+INTENT_SYSTEM_PROMPT = """You are mapping intent from a technical screening transcript.
+Extract ONLY what was actually said. Do not judge quality, do not score,
+and do not consider how clearly or fluently it was said.
+
+CATEGORIES (pick exactly one, the best fit):
+- Debugging & Diagnosis: a real failure, how it was found, how it was fixed
+- System / Data Design: a schema or architecture decision and why
+- Scale & Concurrency: handling load, race conditions, caching, queuing
+- Trade-off Reasoning: a choice made and what was given up
+
+TRANSCRIPT (English):
+{english_text}
+
+Return only this JSON, no prose, no markdown fences. Every value below is a
+placeholder showing the field's TYPE, not example content — fill each one
+from the transcript above, never copy the placeholder text itself:
+{{"action": "<verb phrase for what they specifically did, e.g. 'streamed data in chunks'>", "key_entities": ["<specific technology/tool names actually named>"], "summary": "<one sentence paraphrase of the transcript>", "category": "<the single best-fitting category name from the list above>"}}"""
 
 
 async def extract_intent(english_text: str) -> dict:
@@ -131,8 +168,7 @@ async def extract_intent(english_text: str) -> dict:
         # optional, per the contract.
         reasoning_effort=None,
         messages=[
-            {"role": "system", "content": INTENT_SYSTEM_PROMPT},
-            {"role": "user", "content": english_text},
+            {"role": "user", "content": INTENT_SYSTEM_PROMPT.format(english_text=english_text)},
         ],
         # The Python SDK's chat.completions() has no direct response_format
         # kwarg, but it does accept one through request_options — verified

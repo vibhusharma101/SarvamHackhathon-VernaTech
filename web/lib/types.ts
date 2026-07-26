@@ -104,6 +104,7 @@ export interface StructuredIntent {
   action: string;
   key_entities: string[];
   summary: string;
+  category: string;
 }
 
 export interface IntentBroadcast {

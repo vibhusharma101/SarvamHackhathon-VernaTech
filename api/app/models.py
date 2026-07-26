@@ -118,6 +118,7 @@ class StructuredIntent(BaseModel):
     action: str
     key_entities: list[str]
     summary: str
+    category: str
 
 
 class IntentBroadcast(BaseModel):

@@ -31,7 +31,10 @@ export default function LiveConsolePage({ params }: { params: Promise<{ sessionI
               <span className="font-medium">{broadcast.intent.action}</span>
               <span className="text-xs text-zinc-500">turn {broadcast.turn_idx}</span>
             </div>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{broadcast.intent.summary}</p>
+            <span className="mt-1 inline-block rounded-full bg-black px-2 py-0.5 text-[10px] font-medium text-white dark:bg-white dark:text-black">
+              {broadcast.intent.category}
+            </span>
+            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{broadcast.intent.summary}</p>
             {broadcast.intent.key_entities.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
                 {broadcast.intent.key_entities.map((entity) => (
