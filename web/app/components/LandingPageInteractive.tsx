@@ -3,14 +3,20 @@
 import React, { useState } from "react";
 import Link from "next/link";
 
+type LangCode = "te" | "hi" | "en";
+
+interface SampleLanguageVariation {
+  text: string;
+  langLabel: string;
+}
+
 interface SampleEvidence {
   id: string;
   criterion: string;
   category: string;
   score: number;
-  originalText: string;
-  englishText: string;
-  lang: string;
+  translations: Record<LangCode, SampleLanguageVariation>;
+  englishGloss: string;
   reasoning: string;
 }
 
@@ -20,9 +26,21 @@ const SAMPLE_DATA: Record<string, SampleEvidence> = {
     criterion: "Distributed Caching & High Availability",
     category: "System Architecture",
     score: 5,
-    originalText: "నేను ప్రైమరీ డేటాబేస్‌పై లోడ్ తగ్గించడానికి Redis డిస్ట్రిబ్యూటెడ్ క్యాచే ఉపయోగిస్తాను.",
-    englishText: "I would use a distributed cache like Redis to reduce the read load on the primary database.",
-    lang: "te-IN (Telugu)",
+    translations: {
+      te: {
+        text: "నేను ప్రైమరీ డేటాబేస్‌పై లోడ్ తగ్గించడానికి Redis డిస్ట్రిబ్యూటెడ్ క్యాచే ఉపయోగిస్తాను.",
+        langLabel: "te-IN (Telugu)",
+      },
+      hi: {
+        text: "मैं प्राइमरी डेटाबेस पर लोड कम करने के लिए Redis डिस्ट्रीब्यूटेड कैश का उपयोग करूँगा।",
+        langLabel: "hi-IN (Hindi)",
+      },
+      en: {
+        text: "I would use a distributed cache like Redis to reduce the read load on the primary database.",
+        langLabel: "en-IN (English)",
+      },
+    },
+    englishGloss: "I would use a distributed cache like Redis to reduce the read load on the primary database.",
     reasoning: "Candidate correctly identified caching strategy to decouple DB reads under high load.",
   },
   concurrency: {
@@ -30,9 +48,21 @@ const SAMPLE_DATA: Record<string, SampleEvidence> = {
     criterion: "Race Conditions & Mutex Locking",
     category: "Concurrency Control",
     score: 4,
-    originalText: "కన్కరెంట్ రైట్స్ నిరోధించడానికి రొటేషన్ తాళాలు (Mutex) ఉపయోగిస్తాం.",
-    englishText: "We use mutex locks on shared memory buffers to prevent race conditions during concurrent writes.",
-    lang: "te-IN (Telugu)",
+    translations: {
+      te: {
+        text: "కన్కరెంట్ రైట్స్ నిరోధించడానికి రొటేషన్ తాళాలు (Mutex) ఉపయోగిస్తాం.",
+        langLabel: "te-IN (Telugu)",
+      },
+      hi: {
+        text: "कॉन्करेंट राइट्स को रोकने के लिए हम शेयर्ड मेमोरी बफ़र्स पर म्यूटेक्स (Mutex) लॉक का उपयोग करते हैं।",
+        langLabel: "hi-IN (Hindi)",
+      },
+      en: {
+        text: "We use mutex locks on shared memory buffers to prevent race conditions during concurrent writes.",
+        langLabel: "en-IN (English)",
+      },
+    },
+    englishGloss: "We use mutex locks on shared memory buffers to prevent race conditions during concurrent writes.",
     reasoning: "Understands mutual exclusion locks for shared memory buffer write operations.",
   },
   api_design: {
@@ -40,9 +70,21 @@ const SAMPLE_DATA: Record<string, SampleEvidence> = {
     criterion: "Idempotency & Retry Strategies",
     category: "API Protocol",
     score: 5,
-    originalText: "నెట్‌వర్క్ వైఫల్యాల కోసం Idempotency Key లతో Retry Header చేర్చుతాం.",
-    englishText: "For network retries, we include an Idempotency Key header so duplicated requests are safely ignored.",
-    lang: "hi-IN (Hindi)",
+    translations: {
+      te: {
+        text: "నెట్‌వర్క్ వైఫల్యాల కోసం Idempotency Key లతో Retry Header చేర్చుతాం.",
+        langLabel: "te-IN (Telugu)",
+      },
+      hi: {
+        text: "नेटवर्क विफलताओं के लिए हम Idempotency Key हेडर शामिल करते हैं ताकि डुप्लिकेट अनुरोध इग्नोर हो सकें।",
+        langLabel: "hi-IN (Hindi)",
+      },
+      en: {
+        text: "For network retries, we include an Idempotency Key header so duplicated requests are safely ignored.",
+        langLabel: "en-IN (English)",
+      },
+    },
+    englishGloss: "For network retries, we include an Idempotency Key header so duplicated requests are safely ignored.",
     reasoning: "Demonstrates production experience with idempotent request handling in payment flows.",
   },
 };
@@ -83,9 +125,10 @@ const PIPELINE_STEPS = [
 export function LandingPageInteractive() {
   const [selectedDemo, setSelectedDemo] = useState<string>("system_design");
   const [activePipelineStep, setActivePipelineStep] = useState<number>(2);
-  const [activeLang, setActiveLang] = useState<"te" | "hi" | "en">("te");
+  const [activeLang, setActiveLang] = useState<LangCode>("te");
 
   const currentSample = SAMPLE_DATA[selectedDemo];
+  const activeTranslation = currentSample.translations[activeLang];
 
   return (
     <div className="min-h-screen bg-[#FAFAF8] text-[#111111] font-sans selection:bg-[#EAF6F4] selection:text-[#0F5D5A]">
@@ -187,7 +230,7 @@ export function LandingPageInteractive() {
                   <span className="w-2.5 h-2.5 rounded-full bg-[#0F5D5A]"></span>
                   <span className="font-mono text-xs text-[#111111] font-medium">Candidate Transcript & Traceability Map</span>
                 </div>
-                <span className="font-mono text-xs text-[#8A8A8A]">Session: 0f1fd598</span>
+                <span className="font-mono text-xs text-[#8A8A8A]">Active Language: {activeTranslation.langLabel}</span>
               </div>
 
               <div className="grid md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-[#E8E8E3]">
@@ -225,16 +268,18 @@ export function LandingPageInteractive() {
                     </div>
 
                     <div className="mb-6">
-                      <span className="font-mono text-[10px] text-[#8A8A8A] uppercase block mb-2">Original Spoken Turn</span>
-                      <blockquote className="border-l-2 border-[#0F5D5A] pl-4 py-1 italic text-[#111111] text-base leading-relaxed">
-                        &ldquo;{currentSample.originalText}&rdquo;
+                      <span className="font-mono text-[10px] text-[#8A8A8A] uppercase block mb-2">
+                        Original Spoken Turn ({activeTranslation.langLabel})
+                      </span>
+                      <blockquote className="border-l-2 border-[#0F5D5A] pl-4 py-1 italic text-[#111111] text-base leading-relaxed animate-fade-in">
+                        &ldquo;{activeTranslation.text}&rdquo;
                       </blockquote>
                     </div>
 
                     <div className="mb-6">
                       <span className="font-mono text-[10px] text-[#8A8A8A] uppercase block mb-2">English Gloss Translation</span>
                       <p className="text-sm text-[#5C5C5C] leading-relaxed bg-[#FAFAF8] p-4 border border-[#E8E8E3] rounded-lg font-mono">
-                        {currentSample.englishText}
+                        {currentSample.englishGloss}
                       </p>
                     </div>
 
@@ -245,7 +290,7 @@ export function LandingPageInteractive() {
                   </div>
 
                   <div className="mt-8 pt-4 border-t border-[#E8E8E3] flex items-center justify-between text-xs font-mono text-[#8A8A8A]">
-                    <span>Language: {currentSample.lang}</span>
+                    <span>Language: {activeTranslation.langLabel}</span>
                     <span className="text-[#0F5D5A] font-medium">Trace ID: {currentSample.id}_span_01</span>
                   </div>
                 </div>
@@ -349,7 +394,7 @@ export function LandingPageInteractive() {
                     <span className="text-[#111111] font-semibold">Score: 4.6 / 5</span>
                   </div>
                   <div className="flex items-center justify-between p-4 bg-[#FAFAF8] border border-[#E8E8E3] rounded-xl text-xs font-mono">
-                    <span className="text-[#5C5C5C]">Telugu Session</span>
+                    <span className="text-[#5C5C5C]">Telugu / Hindi Session</span>
                     <span className="text-[#111111] font-semibold">Score: 4.7 / 5</span>
                   </div>
                 </div>
