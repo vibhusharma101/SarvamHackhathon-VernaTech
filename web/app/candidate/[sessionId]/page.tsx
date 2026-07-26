@@ -45,6 +45,18 @@ export default function CandidatePage({ params }: { params: Promise<{ sessionId:
   const socketRef = useRef<InterviewSocket | null>(null);
   const micRef = useRef<MicCaptureHandle | null>(null);
 
+  const forfeitSession = useCallback(() => {
+    micRef.current?.stop();
+    micRef.current = null;
+    socketRef.current?.close();
+    socketRef.current = null;
+    setStarted(false);
+    setStatus("ready");
+    setErrorMessage(null);
+    setQuestion(null);
+    router.push("/");
+  }, [router]);
+
   const startInterview = useCallback(() => {
     setStarted(true);
     setStatus("connecting");
@@ -167,6 +179,13 @@ export default function CandidatePage({ params }: { params: Promise<{ sessionId:
               <span className="text-sm font-medium text-[#111111]">{STATUS_COPY[status]}</span>
             </div>
             {status === "error" && <p className="min-h-[1.25rem] text-sm text-[#C0392B] font-medium mt-2">{errorMessage}</p>}
+            <button
+              type="button"
+              onClick={forfeitSession}
+              className="mt-4 text-xs font-mono text-[#8A8A8A] hover:text-[#C0392B] transition-colors underline underline-offset-2"
+            >
+              Forfeit Session
+            </button>
           </div>
         </div>
       )}
