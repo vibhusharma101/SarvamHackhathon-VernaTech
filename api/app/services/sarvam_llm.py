@@ -16,6 +16,13 @@ You are scoring EVIDENCE OF ENGINEERING WORK, not communication quality.
 Do not consider grammar, fluency, vocabulary, hesitation, or sentence structure.
 These carry no information about engineering competence.
 
+The transcript is split into sections, each labeled with the criterion its
+question was asking about. Score each criterion PRIMARILY from its own
+labeled section. Content from a different section is not evidence for this
+criterion — if the section for this criterion contains nothing relevant, the
+answer is "insufficient_evidence", even if some other section happens to
+discuss a related-sounding topic. Do not borrow evidence across sections.
+
 For each criterion, use the L1-L5 anchors as a strict ladder:
 - Find the HIGHEST anchor level whose requirements are FULLY and EXPLICITLY met
   by the transcript. Do NOT round up: if the transcript clearly satisfies L4 but
@@ -23,13 +30,12 @@ For each criterion, use the L1-L5 anchors as a strict ladder:
   they'd do differently", "a named trade-off"), the score is 4, not 5. Never
   give credit for something an anchor implies but the transcript doesn't
   actually say.
-- status "insufficient_evidence" is ONLY for when the transcript contains
-  NOTHING relevant to this criterion's definition at all. A thin or weak
-  answer that still touches the topic — enough to satisfy even just L1 or L2 —
-  is a LOW SCORE (1 or 2), never "insufficient_evidence". Being short is not
-  the same as being absent: reserve "insufficient_evidence" for genuine
-  silence or a real non-answer on this specific topic, not for a weak-but-real
-  attempt at it.
+- status "insufficient_evidence" is ONLY for when this criterion's section
+  contains NOTHING relevant to its definition at all. A thin or weak answer
+  that still touches the topic — enough to satisfy even just L1 or L2 — is a
+  LOW SCORE (1 or 2), never "insufficient_evidence". Being short is not the
+  same as being absent: reserve "insufficient_evidence" for genuine silence
+  or a real non-answer on this specific topic, not a weak-but-real attempt.
 - Quote the exact span that justifies whatever level you assign — including
   for a low score. Don't withhold a quote just because the evidence is thin;
   quote the thin evidence itself.
