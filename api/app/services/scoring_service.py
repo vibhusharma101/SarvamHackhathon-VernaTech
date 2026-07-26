@@ -15,16 +15,25 @@ Found live, not hypothetically. Do not reorder these two phases.
 """
 
 import json
+import logging
 
 from app.services.aggregate import RunResult, aggregate
 from app.services.sarvam_llm import score_criteria, score_fluency
+
+logger = logging.getLogger(__name__)
 
 
 class ScoringError(Exception):
     pass
 
 
-def _fetch_transcripts(db, session_id: str) -> tuple[str, str]:
+def _fetch_transcripts(db, session_id: str) -> tuple[str, str, list[str]]:
+    """Returns (english_gloss, raw_original, detected_language_codes).
+
+    The languages travel with the transcript because the fluency scorer needs
+    to know whether there was any English produced at all — see
+    sarvam_llm.score_fluency.
+    """
     turns = (
         db.table("turn")
         .select("*")
@@ -35,7 +44,8 @@ def _fetch_transcripts(db, session_id: str) -> tuple[str, str]:
     )
     english_gloss = " ".join(t["asr_english_gloss"] or "" for t in turns.data)
     raw_original = " ".join(t["asr_original_text"] or "" for t in turns.data)
-    return english_gloss, raw_original
+    languages = sorted({t["asr_lang"] for t in turns.data if t.get("asr_lang")})
+    return english_gloss, raw_original, languages
 
 
 async def run_scoring_pass(db, session_id: str) -> str:
@@ -56,12 +66,12 @@ async def run_scoring_pass(db, session_id: str) -> str:
         raise ScoringError(f"no rubric criteria seeded for rubric {rubric_id}")
     criteria_json = json.dumps(criteria_rows.data)
 
-    english_gloss, raw_original = _fetch_transcripts(db, session_id)
+    english_gloss, raw_original, languages = _fetch_transcripts(db, session_id)
     if not english_gloss.strip():
         raise ScoringError("no scored turns yet for this session")
 
     runs = [await score_criteria(criteria_json, english_gloss) for _ in range(3)]
-    fluency = await score_fluency(raw_original)
+    fluency = await score_fluency(raw_original, languages)
 
     criterion_by_name = {c["name"]: c["id"] for c in criteria_rows.data}
 
@@ -92,51 +102,68 @@ async def run_scoring_pass(db, session_id: str) -> str:
         )
 
     # ---- Phase 2: everything above succeeded — now persist. ----
+    #
+    # Supabase's REST client gives us no transaction, so if a write here
+    # fails partway we delete the pass we just created. A pass row that
+    # survives without its results reads as "already scored" to the
+    # interview resume check and the harness, silently suppressing the
+    # retry that would fix it — the exact failure this function was
+    # already bitten by once.
 
     scoring_pass = db.table("scoring_pass").insert({"session_id": session_id, "is_current": True}).execute()
     scoring_pass_id = scoring_pass.data[0]["id"]
-    db.table("scoring_pass").update({"is_current": False}).eq("session_id", session_id).neq(
-        "id", scoring_pass_id
-    ).execute()
 
-    # Raw per-run audit trail (TRD §5 criterion_score) — persisted separately
-    # from the aggregated criterion_result below so scorer disagreement stays
-    # inspectable, not just averaged away.
-    raw_rows = []
-    for run_index, run in enumerate(runs, start=1):
-        for c in run.get("criteria", []):
-            criterion_id = criterion_by_name.get(c.get("name"))
-            if criterion_id is None:
-                continue
-            raw_rows.append(
+    try:
+        # Raw per-run audit trail (TRD §5 criterion_score) — persisted
+        # separately from the aggregated criterion_result below so scorer
+        # disagreement stays inspectable, not just averaged away.
+        raw_rows = []
+        for run_index, run in enumerate(runs, start=1):
+            for c in run.get("criteria", []):
+                criterion_id = criterion_by_name.get(c.get("name"))
+                if criterion_id is None:
+                    continue
+                raw_rows.append(
+                    {
+                        "scoring_pass_id": scoring_pass_id,
+                        "criterion_id": criterion_id,
+                        "run_index": run_index,
+                        "status": c["status"],
+                        "score": c.get("score"),
+                        "evidence_quote_english": c.get("evidence_quote"),
+                        "reason": c.get("reason"),
+                    }
+                )
+        if raw_rows:
+            db.table("criterion_score").insert(raw_rows).execute()
+
+        result_rows = []
+        for name, run_results in by_criterion.items():
+            result = aggregate(run_results)
+            result_rows.append(
                 {
                     "scoring_pass_id": scoring_pass_id,
-                    "criterion_id": criterion_id,
-                    "run_index": run_index,
-                    "status": c["status"],
-                    "score": c.get("score"),
-                    "evidence_quote_english": c.get("evidence_quote"),
-                    "reason": c.get("reason"),
+                    "criterion_id": criterion_by_name[name],
+                    "status": result.status,
+                    "score": result.score,
+                    "evidence_quote_english": result.evidence_quote_english,
+                    "reason": result.reason,
+                    "low_consistency": result.low_consistency,
                 }
             )
-    if raw_rows:
-        db.table("criterion_score").insert(raw_rows).execute()
+        db.table("criterion_result").insert(result_rows).execute()
 
-    result_rows = []
-    for name, run_results in by_criterion.items():
-        result = aggregate(run_results)
-        result_rows.append(
-            {
-                "scoring_pass_id": scoring_pass_id,
-                "criterion_id": criterion_by_name[name],
-                "status": result.status,
-                "score": result.score,
-                "evidence_quote_english": result.evidence_quote_english,
-                "reason": result.reason,
-                "low_consistency": result.low_consistency,
-            }
-        )
-    db.table("criterion_result").insert(result_rows).execute()
+        # Only now is this pass real — flip the previous one off last, so a
+        # failure above leaves the prior good pass still current.
+        db.table("scoring_pass").update({"is_current": False}).eq("session_id", session_id).neq(
+            "id", scoring_pass_id
+        ).execute()
+    except Exception:
+        logger.exception("scoring pass %s failed to persist; rolling it back", scoring_pass_id)
+        db.table("criterion_score").delete().eq("scoring_pass_id", scoring_pass_id).execute()
+        db.table("criterion_result").delete().eq("scoring_pass_id", scoring_pass_id).execute()
+        db.table("scoring_pass").delete().eq("id", scoring_pass_id).execute()
+        raise
 
     db.table("language_proficiency").upsert(
         {

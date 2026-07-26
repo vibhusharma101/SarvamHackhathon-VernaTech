@@ -36,7 +36,10 @@ export interface CriterionResult {
 }
 
 export interface LanguageProficiencyResult {
-  english_fluency: number; // 1-5
+  // null when the candidate produced no meaningful English to rate (e.g. a
+  // session answered entirely in Hindi). Not a missing value to fill in —
+  // see api/app/services/sarvam_llm.py score_fluency.
+  english_fluency: number | null; // 1-5 or null
   disfluency_notes: string | null;
 }
 
@@ -75,6 +78,17 @@ export interface HarnessPairResult {
   english_run_variance: number | null;
   vernacular_run_variance: number | null;
   runs_per_session: number;
+  excluded_criteria_count: number;
+  /** Present only on the response from a run, not on stored rows. */
+  noise_verdict?: string;
+  /** Set instead of stats when a pair's sessions couldn't be scored. */
+  error?: string;
+}
+
+export interface CreateHarnessPairRequest {
+  profile_label: string;
+  english_session_id: string;
+  vernacular_session_id: string;
 }
 
 export interface WritebackResult {

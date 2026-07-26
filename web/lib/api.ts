@@ -2,6 +2,7 @@
 // talks to Supabase directly — everything goes through here.
 
 import type {
+  CreateHarnessPairRequest,
   CreateSessionRequest,
   CreateSessionResponse,
   HarnessPairResult,
@@ -58,6 +59,9 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ profile_labels: profileLabels ?? null }),
     }),
+
+  createHarnessPair: (body: CreateHarnessPairRequest) =>
+    request<HarnessPairResult>("/harness/pairs", { method: "POST", body: JSON.stringify(body) }),
 
   getHarnessResults: () => request<HarnessPairResult[]>("/harness/results"),
 
