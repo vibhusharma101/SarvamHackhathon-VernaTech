@@ -32,7 +32,7 @@ export default function Home() {
         {/* Problem Section */}
         <section className="py-24 px-6 sm:px-12 lg:px-24">
           <div className="max-w-5xl mx-auto">
-            <h2 className="font-serif text-3xl sm:text-4xl text-[#111111] mb-12">Language shouldn't mask logic.</h2>
+            <h2 className="font-serif text-3xl sm:text-4xl text-[#111111] mb-12">Language shouldn&apos;t mask logic.</h2>
             <div className="grid md:grid-cols-2 gap-12 lg:gap-24">
               <div>
                 <p className="text-lg text-[#5C5C5C] leading-relaxed">
@@ -110,7 +110,7 @@ export default function Home() {
               <div className="bg-[#FFFFFF] border border-[#E8E8E3] p-8 md:p-10 flex flex-col justify-center">
                 <div className="font-mono text-xs text-[#8A8A8A] mb-4">Extracted Evidence</div>
                 <blockquote className="border-l-2 border-[#0F5D5A] pl-5 py-1 italic text-[#111111] text-lg leading-relaxed">
-                  "I would use a distributed cache like Redis to reduce the load on the primary database, ensuring we can handle the high read throughput without lagging."
+                  &ldquo;I would use a distributed cache like Redis to reduce the load on the primary database, ensuring we can handle the high read throughput without lagging.&rdquo;
                 </blockquote>
                 <div className="mt-6 flex items-center gap-3">
                   <div className="w-2 h-2 rounded-full bg-[#0A7A53]"></div>

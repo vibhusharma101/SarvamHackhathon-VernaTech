@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { api } from "@/lib/api";
@@ -41,9 +42,9 @@ export default function ConsolePage() {
     <div className="min-h-screen bg-[#FAFAF8] text-[#111111] animate-fade-in">
       <header className="border-b border-[#E8E8E3] bg-[#FAFAF8] px-8 py-5">
         <div className="mx-auto flex max-w-6xl items-center gap-6">
-          <a href="/" className="text-[#5C5C5C] hover:text-[#111111] text-sm transition-colors">
+          <Link href="/" className="text-[#5C5C5C] hover:text-[#111111] text-sm transition-colors">
             &larr; Back
-          </a>
+          </Link>
           <h1 className="text-xl font-medium text-[#111111]">Recruiter Console</h1>
         </div>
       </header>
