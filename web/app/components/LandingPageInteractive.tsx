@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 
-type LangCode = "te" | "hi" | "en";
+type LangCode = "hinglish" | "en";
 
 interface SampleLanguageVariation {
   text: string;
@@ -27,17 +27,13 @@ const SAMPLE_DATA: Record<string, SampleEvidence> = {
     category: "System Architecture",
     score: 5,
     translations: {
-      te: {
-        text: "నేను ప్రైమరీ డేటాబేస్‌పై లోడ్ తగ్గించడానికి Redis డిస్ట్రిబ్యూటెడ్ క్యాచే ఉపయోగిస్తాను.",
-        langLabel: "te-IN (Telugu)",
-      },
-      hi: {
-        text: "मैं प्राइमरी डेटाबेस पर लोड कम करने के लिए Redis डिस्ट्रीब्यूटेड कैश का उपयोग करूँगा।",
-        langLabel: "hi-IN (Hindi)",
+      hinglish: {
+        text: "Main primary database par load kam karne ke liye Redis distributed cache use karunga.",
+        langLabel: "Hinglish",
       },
       en: {
         text: "I would use a distributed cache like Redis to reduce the read load on the primary database.",
-        langLabel: "en-IN (English)",
+        langLabel: "English",
       },
     },
     englishGloss: "I would use a distributed cache like Redis to reduce the read load on the primary database.",
@@ -49,17 +45,13 @@ const SAMPLE_DATA: Record<string, SampleEvidence> = {
     category: "Concurrency Control",
     score: 4,
     translations: {
-      te: {
-        text: "కన్కరెంట్ రైట్స్ నిరోధించడానికి రొటేషన్ తాళాలు (Mutex) ఉపయోగిస్తాం.",
-        langLabel: "te-IN (Telugu)",
-      },
-      hi: {
-        text: "कॉन्करेंट राइट्स को रोकने के लिए हम शेयर्ड मेमोरी बफ़र्स पर म्यूटेक्स (Mutex) लॉक का उपयोग करते हैं।",
-        langLabel: "hi-IN (Hindi)",
+      hinglish: {
+        text: "Concurrent writes ko prevent karne ke liye hum shared memory buffers par Mutex locks use karte hain.",
+        langLabel: "Hinglish",
       },
       en: {
         text: "We use mutex locks on shared memory buffers to prevent race conditions during concurrent writes.",
-        langLabel: "en-IN (English)",
+        langLabel: "English",
       },
     },
     englishGloss: "We use mutex locks on shared memory buffers to prevent race conditions during concurrent writes.",
@@ -71,17 +63,13 @@ const SAMPLE_DATA: Record<string, SampleEvidence> = {
     category: "API Protocol",
     score: 5,
     translations: {
-      te: {
-        text: "నెట్‌వర్క్ వైఫల్యాల కోసం Idempotency Key లతో Retry Header చేర్చుతాం.",
-        langLabel: "te-IN (Telugu)",
-      },
-      hi: {
-        text: "नेटवर्क विफलताओं के लिए हम Idempotency Key हेडर शामिल करते हैं ताकि डुप्लिकेट अनुरोध इग्नोर हो सकें।",
-        langLabel: "hi-IN (Hindi)",
+      hinglish: {
+        text: "Network failures ke case mein hum Idempotency Key header include karte hain taaki duplicate requests safely ignore ho jayein.",
+        langLabel: "Hinglish",
       },
       en: {
         text: "For network retries, we include an Idempotency Key header so duplicated requests are safely ignored.",
-        langLabel: "en-IN (English)",
+        langLabel: "English",
       },
     },
     englishGloss: "For network retries, we include an Idempotency Key header so duplicated requests are safely ignored.",
@@ -99,8 +87,8 @@ const PIPELINE_STEPS = [
   {
     step: "02",
     title: "High-Fidelity ASR",
-    short: "Vernacular STT",
-    detail: "Sarvam saaras:v3 model converts speech in Hindi/Telugu/English into precise transcript turns.",
+    short: "Hinglish STT",
+    detail: "Sarvam saaras:v3 model converts speech in Hinglish/English into precise transcript turns.",
   },
   {
     step: "03",
@@ -125,7 +113,7 @@ const PIPELINE_STEPS = [
 export function LandingPageInteractive() {
   const [selectedDemo, setSelectedDemo] = useState<string>("system_design");
   const [activePipelineStep, setActivePipelineStep] = useState<number>(2);
-  const [activeLang, setActiveLang] = useState<LangCode>("te");
+  const [activeLang, setActiveLang] = useState<LangCode>("hinglish");
 
   const currentSample = SAMPLE_DATA[selectedDemo];
   const activeTranslation = currentSample.translations[activeLang];
@@ -167,7 +155,7 @@ export function LandingPageInteractive() {
             </h1>
 
             <p className="mt-8 text-xl sm:text-2xl text-[#5C5C5C] max-w-2xl leading-relaxed font-light">
-              Score technical competence in any language. Every verdict links directly to transcript quotes, verified with 3-run self-consistency.
+              Score technical competence without language bias. Every verdict links directly to transcript quotes, verified with 3-run self-consistency.
             </p>
 
             <div className="mt-10 flex flex-wrap items-center gap-4">
@@ -190,32 +178,25 @@ export function LandingPageInteractive() {
         </div>
 
         {/* Interactive Product Preview */}
-        <section className="py-24 px-6 sm:px-12 lg:px-24">
+        <section className="py-20 px-6 sm:px-12 lg:px-24">
           <div className="max-w-5xl mx-auto">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4">
               <div>
                 <span className="font-mono text-xs text-[#8A8A8A] uppercase tracking-wider">Interactive Preview</span>
                 <h2 className="font-serif text-3xl sm:text-4xl text-[#111111] mt-2">Live Evidence Extraction</h2>
               </div>
-              <div className="flex items-center gap-2 border border-[#E8E8E3] bg-[#FFFFFF] p-1 rounded-full">
+              <div className="flex items-center gap-1.5 border border-[#E8E8E3] bg-[#FFFFFF] p-1 rounded-full">
                 <button
                   type="button"
-                  onClick={() => setActiveLang("te")}
-                  className={`px-3 py-1 rounded-full text-xs font-mono transition-colors ${activeLang === "te" ? "bg-[#0F5D5A] text-white" : "text-[#5C5C5C]"}`}
+                  onClick={() => setActiveLang("hinglish")}
+                  className={`px-4 py-1.5 rounded-full text-xs font-mono transition-colors ${activeLang === "hinglish" ? "bg-[#0F5D5A] text-white" : "text-[#5C5C5C]"}`}
                 >
-                  Telugu
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveLang("hi")}
-                  className={`px-3 py-1 rounded-full text-xs font-mono transition-colors ${activeLang === "hi" ? "bg-[#0F5D5A] text-white" : "text-[#5C5C5C]"}`}
-                >
-                  Hindi
+                  Hinglish
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveLang("en")}
-                  className={`px-3 py-1 rounded-full text-xs font-mono transition-colors ${activeLang === "en" ? "bg-[#0F5D5A] text-white" : "text-[#5C5C5C]"}`}
+                  className={`px-4 py-1.5 rounded-full text-xs font-mono transition-colors ${activeLang === "en" ? "bg-[#0F5D5A] text-white" : "text-[#5C5C5C]"}`}
                 >
                   English
                 </button>
@@ -262,26 +243,28 @@ export function LandingPageInteractive() {
                   <div>
                     <div className="flex items-center justify-between mb-6">
                       <span className="font-mono text-xs text-[#8A8A8A] uppercase">Verifiable Evidence Span</span>
-                      <span className="font-mono text-xs text-[#0A7A53] border border-[#0A7A53]/30 px-2 py-0.5 rounded-full">
+                      <span className="font-mono text-xs text-[#0A7A53] border border-[#0A7A53]/30 px-2.5 py-0.5 rounded-full">
                         ✓ 3-Run Self-Consistent
                       </span>
                     </div>
 
                     <div className="mb-6">
                       <span className="font-mono text-[10px] text-[#8A8A8A] uppercase block mb-2">
-                        Original Spoken Turn ({activeTranslation.langLabel})
+                        Spoken Turn ({activeTranslation.langLabel})
                       </span>
                       <blockquote className="border-l-2 border-[#0F5D5A] pl-4 py-1 italic text-[#111111] text-base leading-relaxed animate-fade-in">
                         &ldquo;{activeTranslation.text}&rdquo;
                       </blockquote>
                     </div>
 
-                    <div className="mb-6">
-                      <span className="font-mono text-[10px] text-[#8A8A8A] uppercase block mb-2">English Gloss Translation</span>
-                      <p className="text-sm text-[#5C5C5C] leading-relaxed bg-[#FAFAF8] p-4 border border-[#E8E8E3] rounded-lg font-mono">
-                        {currentSample.englishGloss}
-                      </p>
-                    </div>
+                    {activeLang === "hinglish" && (
+                      <div className="mb-6">
+                        <span className="font-mono text-[10px] text-[#8A8A8A] uppercase block mb-2">English Gloss Translation</span>
+                        <p className="text-xs text-[#5C5C5C] leading-relaxed bg-[#FAFAF8] p-3 border border-[#E8E8E3] rounded-lg font-mono">
+                          {currentSample.englishGloss}
+                        </p>
+                      </div>
+                    )}
 
                     <div>
                       <span className="font-mono text-[10px] text-[#8A8A8A] uppercase block mb-1">Evaluator Reasoning</span>
@@ -290,7 +273,7 @@ export function LandingPageInteractive() {
                   </div>
 
                   <div className="mt-8 pt-4 border-t border-[#E8E8E3] flex items-center justify-between text-xs font-mono text-[#8A8A8A]">
-                    <span>Language: {activeTranslation.langLabel}</span>
+                    <span>Mode: {activeTranslation.langLabel}</span>
                     <span className="text-[#0F5D5A] font-medium">Trace ID: {currentSample.id}_span_01</span>
                   </div>
                 </div>
@@ -305,27 +288,27 @@ export function LandingPageInteractive() {
         </div>
 
         {/* Interactive Pipeline Diagram */}
-        <section className="py-24 px-6 sm:px-12 lg:px-24">
+        <section className="py-20 px-6 sm:px-12 lg:px-24">
           <div className="max-w-5xl mx-auto">
-            <div className="mb-16">
+            <div className="mb-12">
               <span className="font-mono text-xs text-[#8A8A8A] uppercase tracking-wider">Technical Architecture</span>
               <h2 className="font-serif text-3xl sm:text-4xl text-[#111111] mt-2">How it works</h2>
             </div>
 
             {/* Interactive Pipeline Nodes */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6">
               {PIPELINE_STEPS.map((item, idx) => (
                 <button
                   key={item.step}
                   type="button"
                   onClick={() => setActivePipelineStep(idx)}
-                  className={`text-left p-5 border transition-all ${
+                  className={`text-left p-4 border transition-all rounded-xl ${
                     activePipelineStep === idx
                       ? "border-[#0F5D5A] bg-[#FFFFFF] shadow-sm"
                       : "border-[#E8E8E3] bg-[#FAFAF8] hover:border-[#111111]"
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-between mb-3">
                     <span className="font-mono text-xs text-[#8A8A8A]">{item.step}</span>
                     {activePipelineStep === idx && <span className="w-1.5 h-1.5 rounded-full bg-[#0F5D5A]"></span>}
                   </div>
@@ -336,19 +319,19 @@ export function LandingPageInteractive() {
             </div>
 
             {/* Step Detail Card */}
-            <div className="bg-[#FFFFFF] border border-[#E8E8E3] p-8 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="bg-[#FFFFFF] border border-[#E8E8E3] p-6 sm:p-8 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
               <div>
                 <span className="font-mono text-xs text-[#0F5D5A] uppercase tracking-wider block mb-1">
                   Step {PIPELINE_STEPS[activePipelineStep].step} — {PIPELINE_STEPS[activePipelineStep].title}
                 </span>
-                <p className="text-base text-[#111111] max-w-2xl leading-relaxed">
+                <p className="text-sm text-[#111111] max-w-2xl leading-relaxed">
                   {PIPELINE_STEPS[activePipelineStep].detail}
                 </p>
               </div>
 
-              {/* Animated Waveform / Node Visual */}
-              <div className="flex items-center gap-1 bg-[#FAFAF8] border border-[#E8E8E3] p-4 rounded-xl shrink-0">
-                <svg width="120" height="40" viewBox="0 0 120 40" fill="none">
+              {/* Minimal Waveform / Node Visual */}
+              <div className="flex items-center gap-1 bg-[#FAFAF8] border border-[#E8E8E3] p-3 rounded-xl shrink-0">
+                <svg width="100" height="32" viewBox="0 0 120 40" fill="none">
                   <path d="M10 20 Q 20 5, 30 20 T 50 20 T 70 5 T 90 35 T 110 20" stroke="#0F5D5A" strokeWidth="2" fill="none" />
                   <circle cx="30" cy="20" r="3" fill="#0F5D5A" />
                   <circle cx="70" cy="5" r="3" fill="#0F5D5A" />
@@ -359,60 +342,11 @@ export function LandingPageInteractive() {
           </div>
         </section>
 
-        {/* Divider */}
-        <div className="max-w-5xl mx-auto px-6 sm:px-12 lg:px-24">
-          <hr className="border-[#E8E8E3]" />
-        </div>
-
-        {/* Language Consistency Audit Section */}
-        <section className="py-24 px-6 sm:px-12 lg:px-24">
-          <div className="max-w-5xl mx-auto">
-            <div className="grid md:grid-cols-12 gap-12 items-center">
-              <div className="md:col-span-5">
-                <span className="font-mono text-xs text-[#8A8A8A] uppercase tracking-wider block mb-2">Fairness Engine</span>
-                <h2 className="font-serif text-3xl sm:text-4xl text-[#111111] mb-6">Language Consistency Audit</h2>
-                <p className="text-base text-[#5C5C5C] leading-relaxed mb-6">
-                  Would this candidate receive the exact same technical score regardless of whether they answered in English or their native language?
-                </p>
-                <p className="text-sm text-[#5C5C5C] leading-relaxed mb-8">
-                  Our fairness harness compares paired sessions across profiles, calculating Mean Absolute Difference (MAD) against run-to-run noise thresholds.
-                </p>
-                <Link href="/harness" className="inline-flex items-center justify-center border border-[#E8E8E3] hover:border-[#111111] text-[#111111] px-6 py-3 rounded-full text-xs font-mono transition-colors">
-                  Run Language Consistency Audit →
-                </Link>
-              </div>
-
-              <div className="md:col-span-7 bg-[#FFFFFF] border border-[#E8E8E3] p-8 rounded-2xl">
-                <div className="flex items-center justify-between border-b border-[#E8E8E3] pb-4 mb-6">
-                  <span className="font-mono text-xs text-[#111111] font-medium">Paired Profile Comparison</span>
-                  <span className="font-mono text-xs text-[#0A7A53]">MAD: 0.12 (Within Noise Threshold)</span>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-[#FAFAF8] border border-[#E8E8E3] rounded-xl text-xs font-mono">
-                    <span className="text-[#5C5C5C]">English Session</span>
-                    <span className="text-[#111111] font-semibold">Score: 4.6 / 5</span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-[#FAFAF8] border border-[#E8E8E3] rounded-xl text-xs font-mono">
-                    <span className="text-[#5C5C5C]">Telugu / Hindi Session</span>
-                    <span className="text-[#111111] font-semibold">Score: 4.7 / 5</span>
-                  </div>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-[#E8E8E3] text-xs text-[#8A8A8A] flex items-center justify-between">
-                  <span>Delta: 0.10 points</span>
-                  <span>Scorer Noise: 0.15 points</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Final CTA */}
-        <section className="py-28 px-6 sm:px-12 lg:px-24 bg-[#FFFFFF] border-t border-[#E8E8E3]">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="font-serif text-4xl sm:text-5xl text-[#111111] mb-6">Ready to evaluate engineering skill with evidence?</h2>
-            <p className="text-lg text-[#5C5C5C] max-w-xl mx-auto mb-10">
+        <section className="py-24 px-6 sm:px-12 lg:px-24 bg-[#FFFFFF] border-t border-[#E8E8E3]">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="font-serif text-4xl text-[#111111] mb-4">Ready to evaluate engineering skill with evidence?</h2>
+            <p className="text-base text-[#5C5C5C] max-w-lg mx-auto mb-8">
               Start a candidate session, inspect real-time intent extraction in the recruiter console, or validate fairness across languages.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
@@ -427,7 +361,7 @@ export function LandingPageInteractive() {
         </section>
       </main>
 
-      <footer className="py-12 px-6 sm:px-12 text-center border-t border-[#E8E8E3] bg-[#FAFAF8]">
+      <footer className="py-8 px-6 sm:px-12 text-center border-t border-[#E8E8E3] bg-[#FAFAF8]">
         <p className="font-mono text-xs text-[#8A8A8A]">Vernatech &copy; {new Date().getFullYear()} — Evaluated by evidence, not fluency.</p>
       </footer>
     </div>
