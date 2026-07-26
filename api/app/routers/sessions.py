@@ -103,6 +103,15 @@ def get_turns(session_id: str):
     ]
 
 
+@router.get("/sessions/{session_id}/note")
+def get_session_note(session_id: str):
+    db = get_client()
+    row = db.table("session").select("recruiter_note").eq("id", session_id).limit(1).execute()
+    if not row.data:
+        raise HTTPException(status_code=404, detail="session not found")
+    return {"note": row.data[0].get("recruiter_note")}
+
+
 @router.post("/sessions/{session_id}/upload")
 async def upload_fallback_audio(session_id: str, file: UploadFile):
     """C8 fallback (TRD §9): a pre-recorded WAV takes the same path a live

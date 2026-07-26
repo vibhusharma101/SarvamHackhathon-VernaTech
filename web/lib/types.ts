@@ -183,6 +183,6 @@ export interface InterviewStartResponse {
 export type InterviewServerEvent =
   | { type: "question"; idx: number; total: number; text: string }
   | { type: "ack"; status: "processing" }
-  | { type: "ack"; status: "done"; turn_idx: number }
+  | { type: "ack"; status: "done"; turn_idx: number; language_code: string }
   | { type: "error"; message: string }
   | { type: "complete"; session_id: string; scoring_pass_id: string | null; error?: string };

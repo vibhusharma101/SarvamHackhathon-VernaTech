@@ -21,6 +21,7 @@ export default function ConsolePage() {
   const [scorecard, setScorecard] = useState<Scorecard | null>(null);
   const [latency, setLatency] = useState<SessionLatency | null>(null);
   const [turns, setTurns] = useState<SessionTurn[]>([]);
+  const [note, setNote] = useState<string | null>(null);
 
   useEffect(() => {
     const poll = () => api.listSessions().then(setSessions).catch(() => {});
@@ -36,30 +37,33 @@ export default function ConsolePage() {
     api.getScorecard(sessionId).then(setScorecard).catch(() => setScorecard(null));
     api.getLatency(sessionId).then(setLatency).catch(() => setLatency(null));
     api.getTurns(sessionId).then(setTurns).catch(() => setTurns([]));
+    api.getSessionNote(sessionId).then((r) => setNote(r.note)).catch(() => setNote(null));
   }, []);
 
   return (
     <div className="min-h-screen bg-[#FAFAF8] text-[#111111] animate-fade-in">
       <header className="border-b border-[#E8E8E3] bg-[#FAFAF8] px-8 py-5">
-        <div className="mx-auto flex max-w-6xl items-center gap-6">
+        <div className="mx-auto flex max-w-7xl items-center gap-6">
           <Link href="/" className="text-[#5C5C5C] hover:text-[#111111] text-sm transition-colors">
             &larr; Back
           </Link>
           <h1 className="text-xl font-medium text-[#111111]">Recruiter Console</h1>
         </div>
       </header>
-      <main className="mx-auto flex max-w-6xl gap-8 p-8 items-start">
-        <aside className="w-80 shrink-0">
+      <main className="mx-auto flex max-w-7xl gap-8 p-8 items-start">
+        <aside className="w-72 shrink-0">
           <h2 className="mb-4 text-xs font-mono uppercase tracking-widest text-[#8A8A8A]">Sessions</h2>
           <SessionList sessions={sessions} selectedId={selectedId} onSelect={loadDetail} />
         </aside>
 
-        <section className="flex-1">
+        <section className="min-w-0 flex-1">
           {selectedId ? (
-            <div className="flex flex-col gap-10 animate-slide-up-sm stagger">
-              <div className="flex items-center justify-between pb-4 border-b border-[#E8E8E3]">
+            <div className="flex flex-col gap-8 animate-slide-up-sm stagger">
+              <div className="flex items-start justify-between gap-6 pb-4 border-b border-[#E8E8E3]">
                 <h2 className="text-2xl font-medium text-[#111111]">Scorecard</h2>
-                <RescoreButton sessionId={selectedId} onRescored={() => loadDetail(selectedId)} />
+                <div className="w-80 shrink-0">
+                  <RescoreButton sessionId={selectedId} initialNote={note} onRescored={() => loadDetail(selectedId)} />
+                </div>
               </div>
 
               {scorecard ? (
@@ -78,13 +82,6 @@ export default function ConsolePage() {
                   </p>
                 </div>
               )}
-
-              <div className="border-t border-[#E8E8E3] pt-10">
-                <h4 className="mb-6 text-xs font-mono tracking-widest uppercase text-[#8A8A8A]">
-                  Transcript — original language vs. English gloss
-                </h4>
-                <TranscriptPanel turns={turns} />
-              </div>
             </div>
           ) : (
             <div className="flex h-64 flex-col items-center justify-center text-center gap-4">
@@ -92,6 +89,17 @@ export default function ConsolePage() {
             </div>
           )}
         </section>
+
+        {selectedId && (
+          <aside className="w-96 shrink-0 border-l border-[#E8E8E3] pl-8">
+            <h4 className="mb-4 text-xs font-mono tracking-widest uppercase text-[#8A8A8A] sticky top-8">
+              Transcript — original vs. English gloss
+            </h4>
+            <div className="max-h-[calc(100vh-10rem)] overflow-y-auto pr-1">
+              <TranscriptPanel turns={turns} />
+            </div>
+          </aside>
+        )}
       </main>
     </div>
   );

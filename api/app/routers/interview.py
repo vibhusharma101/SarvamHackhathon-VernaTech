@@ -14,9 +14,11 @@ read it back. Explicit scope decision for the hackathon, not an oversight.
 import asyncio
 import json
 import logging
+import time
 import uuid
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Body, HTTPException, WebSocket, WebSocketDisconnect
 
 from app.db import get_client
 from app.services.sarvam_intent import (
@@ -48,7 +50,7 @@ QUESTIONS = [
 
 
 @router.post("/interview/start")
-def start_interview():
+def start_interview(body: dict = Body(default={})):
     db = get_client()
 
     role = db.table("role").select("id").eq("title", ROLE_TITLE).limit(1).execute()
@@ -59,11 +61,12 @@ def start_interview():
         )
     role_id = role.data[0]["id"]
 
-    candidate = (
-        db.table("candidate")
-        .insert({"name": f"Candidate {uuid.uuid4().hex[:8]}", "role_id": role_id})
-        .execute()
-    )
+    # Candidate types their name on the entry page so the console shows
+    # "Priya Sharma" instead of an opaque "Candidate a1b2c3d4" — falls back
+    # to the generated placeholder if left blank, never a hard requirement.
+    name = (body.get("name") or "").strip() or f"Candidate {uuid.uuid4().hex[:8]}"
+
+    candidate = db.table("candidate").insert({"name": name, "role_id": role_id}).execute()
     candidate_id = candidate.data[0]["id"]
 
     session = (
@@ -86,12 +89,30 @@ def start_interview():
     return {"session_id": session_id, "questions": QUESTIONS}
 
 
-def _persist_turn(session_id: str, idx: int, original_text: str, language_code: str, english_text: str) -> None:
+def _iso(epoch_seconds: float) -> str:
+    return datetime.fromtimestamp(epoch_seconds, tz=timezone.utc).isoformat()
+
+
+def _persist_turn(
+    session_id: str,
+    idx: int,
+    original_text: str,
+    language_code: str,
+    english_text: str,
+    t_speech_end: str,
+    t_asr_final: str,
+) -> None:
     try:
         # Upsert on (session_id, idx), not insert — a client retry on the
         # same question index (e.g. reconnect right after a turn lands but
         # before the ack is received) must overwrite, not crash on the
         # unique constraint.
+        #
+        # Only speech_end -> asr_final is real for this flow: unlike the
+        # TRD's live Pipecat pipeline, there's no per-turn LLM response or
+        # TTS here (questions are fixed, scoring runs once at the end across
+        # all 4 turns) — t_llm_first_token/t_tts_first_byte/t_playback_start
+        # genuinely don't apply and are left null rather than faked.
         get_client().table("turn").upsert(
             {
                 "session_id": session_id,
@@ -99,6 +120,8 @@ def _persist_turn(session_id: str, idx: int, original_text: str, language_code: 
                 "asr_original_text": original_text,
                 "asr_lang": language_code,
                 "asr_english_gloss": english_text,
+                "t_speech_end": t_speech_end,
+                "t_asr_final": t_asr_final,
             },
             on_conflict="session_id,idx",
         ).execute()
@@ -195,6 +218,10 @@ async def interview_stream(websocket: WebSocket, session_id: str):
                 await websocket.send_json({"type": "error", "message": "empty audio buffer"})
                 continue
 
+            # Speech-end is the moment the server sees the "stop" signal —
+            # the client held the mic until this point, so this is the real
+            # end-of-speech instant, not an approximation.
+            t_speech_end = time.time()
             await websocket.send_json({"type": "ack", "status": "processing"})
 
             try:
@@ -210,11 +237,21 @@ async def interview_stream(websocket: WebSocket, session_id: str):
                     translate_speech_to_english(audio_bytes),
                     transcribe_speech_original(audio_bytes),
                 )
+                t_asr_final = time.time()
                 await asyncio.to_thread(
-                    _persist_turn, session_id, current_idx, original_text, language_code, english_text
+                    _persist_turn,
+                    session_id,
+                    current_idx,
+                    original_text,
+                    language_code,
+                    english_text,
+                    _iso(t_speech_end),
+                    _iso(t_asr_final),
                 )
 
-                await websocket.send_json({"type": "ack", "status": "done", "turn_idx": current_idx})
+                await websocket.send_json(
+                    {"type": "ack", "status": "done", "turn_idx": current_idx, "language_code": language_code}
+                )
 
                 current_idx += 1
                 if current_idx < len(QUESTIONS):
