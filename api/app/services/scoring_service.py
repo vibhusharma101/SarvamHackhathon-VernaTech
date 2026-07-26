@@ -64,13 +64,28 @@ async def run_scoring_pass(db, session_id: str) -> str:
     criteria_rows = db.table("rubric_criterion").select("*").eq("rubric_id", rubric_id).execute()
     if not criteria_rows.data:
         raise ScoringError(f"no rubric criteria seeded for rubric {rubric_id}")
+
     criteria_json = json.dumps(criteria_rows.data)
+
+    # Recruiter notes are tagged to a SPECIFIC criterion (criterion_note
+    # table, not a session-wide blob) and persist across every scoring pass
+    # from here on, not just the one that saved them — that's what makes a
+    # rescore-after-comment actually change that one criterion's outcome
+    # instead of nudging all of them equally. Passed as its own labeled
+    # prompt section (see sarvam_llm.score_criteria) rather than embedded
+    # inside the criterion's JSON object — found live that burying it as one
+    # more key among ~8 others made the model ignore it outright.
+    note_rows = db.table("criterion_note").select("criterion_id, note").eq("session_id", session_id).execute()
+    notes_by_criterion_id = {r["criterion_id"]: r["note"] for r in note_rows.data if r.get("note")}
+    recruiter_notes = {
+        c["name"]: notes_by_criterion_id[c["id"]] for c in criteria_rows.data if c["id"] in notes_by_criterion_id
+    }
 
     english_gloss, raw_original, languages = _fetch_transcripts(db, session_id)
     if not english_gloss.strip():
         raise ScoringError("no scored turns yet for this session")
 
-    runs = [await score_criteria(criteria_json, english_gloss) for _ in range(3)]
+    runs = [await score_criteria(criteria_json, english_gloss, recruiter_notes) for _ in range(3)]
     fluency = await score_fluency(raw_original, languages)
 
     criterion_by_name = {c["name"]: c["id"] for c in criteria_rows.data}
@@ -86,10 +101,21 @@ async def run_scoring_pass(db, session_id: str) -> str:
             if name not in criterion_by_name:
                 unmatched.add(str(name))
                 continue
+
+            status = c.get("status")
+            score = c.get("score")
+            if status not in ("scored", "insufficient_evidence"):
+                # Found live: the model occasionally writes the score value
+                # into `status` (e.g. "4") instead of the literal "scored",
+                # which would otherwise silently drop a correctly-reasoned
+                # result out of the aggregate (status != "scored" filters it
+                # out entirely). A present int score is unambiguous intent.
+                status = "scored" if isinstance(score, int) and 1 <= score <= 5 else "insufficient_evidence"
+
             by_criterion.setdefault(name, []).append(
                 RunResult(
-                    status=c["status"],
-                    score=c.get("score"),
+                    status=status,
+                    score=score if status == "scored" else None,
                     evidence_quote_english=c.get("evidence_quote"),
                     reason=c.get("reason"),
                 )

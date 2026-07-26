@@ -103,6 +103,15 @@ def get_turns(session_id: str):
     ]
 
 
+@router.get("/sessions/{session_id}/notes")
+def get_session_notes(session_id: str):
+    """{criterion_id: note} — tagged per criterion, not one session-wide
+    blob. See app/routers/scoring.py's rescore endpoint for the write side."""
+    db = get_client()
+    rows = db.table("criterion_note").select("criterion_id, note").eq("session_id", session_id).execute()
+    return {r["criterion_id"]: r["note"] for r in rows.data}
+
+
 @router.post("/sessions/{session_id}/upload")
 async def upload_fallback_audio(session_id: str, file: UploadFile):
     """C8 fallback (TRD §9): a pre-recorded WAV takes the same path a live

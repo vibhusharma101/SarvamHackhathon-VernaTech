@@ -39,7 +39,10 @@ export const api = {
 
   getTurns: (sessionId: string) => request<SessionTurn[]>(`/sessions/${sessionId}/turns`),
 
-  startInterview: () => request<InterviewStartResponse>("/interview/start", { method: "POST" }),
+  getSessionNotes: (sessionId: string) => request<Record<string, string>>(`/sessions/${sessionId}/notes`),
+
+  startInterview: (name?: string) =>
+    request<InterviewStartResponse>("/interview/start", { method: "POST", body: JSON.stringify({ name }) }),
 
   uploadFallbackAudio: async (sessionId: string, file: File) => {
     const res = await fetch(`${API_BASE}/sessions/${sessionId}/upload`, { method: "POST", body: file });
@@ -49,8 +52,11 @@ export const api = {
 
   score: (sessionId: string) => request<{ scoring_pass_id: string }>(`/sessions/${sessionId}/score`, { method: "POST" }),
 
-  rescore: (sessionId: string) =>
-    request<{ scoring_pass_id: string }>(`/sessions/${sessionId}/rescore`, { method: "POST" }),
+  rescore: (sessionId: string, notes: Record<string, string>) =>
+    request<{ scoring_pass_id: string }>(`/sessions/${sessionId}/rescore`, {
+      method: "POST",
+      body: JSON.stringify({ notes }),
+    }),
 
   writeback: (sessionId: string) => request<WritebackResult>(`/sessions/${sessionId}/writeback`, { method: "POST" }),
 

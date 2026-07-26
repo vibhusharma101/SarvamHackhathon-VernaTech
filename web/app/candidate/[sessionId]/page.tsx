@@ -32,6 +32,21 @@ interface QuestionState {
   text: string;
 }
 
+const LANGUAGE_NAMES: Record<string, string> = {
+  "en-IN": "English",
+  "hi-IN": "Hindi",
+  "te-IN": "Telugu",
+  "ta-IN": "Tamil",
+  "kn-IN": "Kannada",
+  "ml-IN": "Malayalam",
+  "bn-IN": "Bengali",
+  "mr-IN": "Marathi",
+  "gu-IN": "Gujarati",
+  "pa-IN": "Punjabi",
+  "od-IN": "Odia",
+  unknown: "an unrecognized language",
+};
+
 export default function CandidatePage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = use(params);
   const router = useRouter();
@@ -41,9 +56,23 @@ export default function CandidatePage({ params }: { params: Promise<{ sessionId:
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [question, setQuestion] = useState<QuestionState | null>(null);
   const [scoringPassId, setScoringPassId] = useState<string | null>(null);
+  const [languageToast, setLanguageToast] = useState<string | null>(null);
 
   const socketRef = useRef<InterviewSocket | null>(null);
   const micRef = useRef<MicCaptureHandle | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const forfeitSession = useCallback(() => {
+    micRef.current?.stop();
+    micRef.current = null;
+    socketRef.current?.close();
+    socketRef.current = null;
+    setStarted(false);
+    setStatus("ready");
+    setErrorMessage(null);
+    setQuestion(null);
+    router.push("/");
+  }, [router]);
 
   const startInterview = useCallback(() => {
     setStarted(true);
@@ -58,6 +87,14 @@ export default function CandidatePage({ params }: { params: Promise<{ sessionId:
     });
     socket.onAck((ack) => {
       if (ack.status === "processing") setStatus("processing");
+      if (ack.status === "done") {
+        // Fire-and-forget: informational only, no confirmation required —
+        // it auto-dismisses and never blocks the interview from continuing.
+        const label = LANGUAGE_NAMES[ack.language_code] ?? ack.language_code;
+        setLanguageToast(`Detected language: ${label}`);
+        if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+        toastTimeoutRef.current = setTimeout(() => setLanguageToast(null), 3500);
+      }
     });
     socket.onError((message) => {
       setStatus("error");
@@ -167,6 +204,25 @@ export default function CandidatePage({ params }: { params: Promise<{ sessionId:
               <span className="text-sm font-medium text-[#111111]">{STATUS_COPY[status]}</span>
             </div>
             {status === "error" && <p className="min-h-[1.25rem] text-sm text-[#C0392B] font-medium mt-2">{errorMessage}</p>}
+            <button
+              type="button"
+              onClick={forfeitSession}
+              className="mt-4 text-xs font-mono text-[#8A8A8A] hover:text-[#C0392B] transition-colors underline underline-offset-2"
+            >
+              Forfeit Session
+            </button>
+          </div>
+        </div>
+      )}
+
+      {languageToast && (
+        <div
+          role="status"
+          className="fixed bottom-6 right-6 animate-slide-up-sm border border-[#E8E8E3] bg-white px-4 py-3 text-sm text-[#111111] shadow-lg"
+        >
+          <div className="flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#0F5D5A]" />
+            {languageToast}
           </div>
         </div>
       )}

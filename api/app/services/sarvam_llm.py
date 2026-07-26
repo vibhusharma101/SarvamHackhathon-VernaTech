@@ -16,20 +16,32 @@ You are scoring EVIDENCE OF ENGINEERING WORK, not communication quality.
 Do not consider grammar, fluency, vocabulary, hesitation, or sentence structure.
 These carry no information about engineering competence.
 
-For each criterion:
-- If the transcript contains evidence meeting the requirement, assign 1-5 using the
-  anchors and QUOTE the exact span that justifies it.
-- If it does not, return status "insufficient_evidence", score null, and state in
-  `reason` what specifically was missing.
-
-You may not assign a score without a supporting quote.
-A short or incomplete answer is insufficient evidence — it is not a low score.
+For each criterion, use the L1-L5 anchors as a strict ladder:
+- Find the HIGHEST anchor level whose requirements are FULLY and EXPLICITLY met
+  by the transcript. Do NOT round up: if the transcript clearly satisfies L4 but
+  doesn't explicitly state the specific extra thing L5 asks for (e.g. "what
+  they'd do differently", "a named trade-off"), the score is 4, not 5. Never
+  give credit for something an anchor implies but the transcript doesn't
+  actually say.
+- status "insufficient_evidence" is ONLY for when the transcript contains
+  NOTHING relevant to this criterion's definition at all. A thin or weak
+  answer that still touches the topic — enough to satisfy even just L1 or L2 —
+  is a LOW SCORE (1 or 2), never "insufficient_evidence". Being short is not
+  the same as being absent: reserve "insufficient_evidence" for genuine
+  silence or a real non-answer on this specific topic, not for a weak-but-real
+  attempt at it.
+- Quote the exact span that justifies whatever level you assign — including
+  for a low score. Don't withhold a quote just because the evidence is thin;
+  quote the thin evidence itself.
+- If truly nothing relevant was said, return status "insufficient_evidence",
+  score null, and state in `reason` what specifically was missing.
+- When status is "insufficient_evidence", score MUST be null — never a number.
 
 CRITERIA:
 {criteria_json}
 
 TRANSCRIPT (clarification turns excluded):
-{english_gloss_transcript}
+{english_gloss_transcript}{recruiter_notes_block}
 
 Return only this JSON, no prose:
 {{
@@ -98,10 +110,31 @@ async def _chat_completion(system_prompt: str, user_content: str) -> dict:
         return json.loads(content)
 
 
-async def score_criteria(criteria_json: str, english_gloss_transcript: str) -> dict:
-    """One scoring run. Caller fires this 3x and aggregates (see services/aggregate.py)."""
+async def score_criteria(
+    criteria_json: str, english_gloss_transcript: str, recruiter_notes: dict[str, str] | None = None
+) -> dict:
+    """One scoring run. Caller fires this 3x and aggregates (see services/aggregate.py).
+
+    recruiter_notes is {criterion_name: note}. Found live: embedding a note as
+    just one more key inside a criterion's JSON object (buried among id,
+    definition, 5 anchors, weight) made the model ignore it entirely — its
+    own stated reasoning contradicted a note that was right there in the
+    input. Promoting it to its own clearly-labeled prompt section instead.
+    """
+    recruiter_notes_block = ""
+    if recruiter_notes:
+        lines = "\n".join(f'- For criterion "{name}": {note}' for name, note in recruiter_notes.items())
+        recruiter_notes_block = (
+            "\n\nRECRUITER-ADDED CONTEXT (added by the recruiter after the interview). Each note "
+            "applies ONLY to the named criterion — treat it as additional testimony about what the "
+            "candidate said or clarified for that criterion specifically, alongside the transcript. "
+            f"It must NOT influence any other criterion's score:\n{lines}"
+        )
+
     prompt = SCORING_SYSTEM_PROMPT.format(
-        criteria_json=criteria_json, english_gloss_transcript=english_gloss_transcript
+        criteria_json=criteria_json,
+        english_gloss_transcript=english_gloss_transcript,
+        recruiter_notes_block=recruiter_notes_block,
     )
     return await _chat_completion(prompt, "Score the transcript above per the criteria.")
 
