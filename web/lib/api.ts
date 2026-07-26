@@ -39,7 +39,7 @@ export const api = {
 
   getTurns: (sessionId: string) => request<SessionTurn[]>(`/sessions/${sessionId}/turns`),
 
-  getSessionNote: (sessionId: string) => request<{ note: string | null }>(`/sessions/${sessionId}/note`),
+  getSessionNotes: (sessionId: string) => request<Record<string, string>>(`/sessions/${sessionId}/notes`),
 
   startInterview: (name?: string) =>
     request<InterviewStartResponse>("/interview/start", { method: "POST", body: JSON.stringify({ name }) }),
@@ -52,10 +52,10 @@ export const api = {
 
   score: (sessionId: string) => request<{ scoring_pass_id: string }>(`/sessions/${sessionId}/score`, { method: "POST" }),
 
-  rescore: (sessionId: string, comment?: string) =>
+  rescore: (sessionId: string, notes: Record<string, string>) =>
     request<{ scoring_pass_id: string }>(`/sessions/${sessionId}/rescore`, {
       method: "POST",
-      body: JSON.stringify({ comment }),
+      body: JSON.stringify({ notes }),
     }),
 
   writeback: (sessionId: string) => request<WritebackResult>(`/sessions/${sessionId}/writeback`, { method: "POST" }),

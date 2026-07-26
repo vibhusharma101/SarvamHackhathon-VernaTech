@@ -4,8 +4,20 @@ import { ConsistencyBadge } from "./ConsistencyBadge";
 
 // R2 (TRD §6.2): original-language quote and English gloss side by side.
 // R3: refusal rendered distinctly from a low score — grey, never red.
+//
+// Each criterion carries its own recruiter note (tagged to that specific
+// criterion_id, not the whole session) — persisted and reused on every
+// future rescore. See app/routers/scoring.py's rescore endpoint.
 
-export function ScoreCard({ scorecard }: { scorecard: Scorecard }) {
+export function ScoreCard({
+  scorecard,
+  notes,
+  onNoteChange,
+}: {
+  scorecard: Scorecard;
+  notes: Record<string, string>;
+  onNoteChange: (criterionId: string, note: string) => void;
+}) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-baseline justify-between pb-2">
@@ -56,6 +68,14 @@ export function ScoreCard({ scorecard }: { scorecard: Scorecard }) {
               <p className="text-sm text-[#5C5C5C] italic">{c.reason ?? "No reason recorded."}</p>
             </div>
           )}
+
+          <textarea
+            value={notes[c.criterion_id] ?? ""}
+            onChange={(e) => onNoteChange(c.criterion_id, e.target.value)}
+            placeholder={`Tag a note to "${c.rubric_criterion?.name ?? "this criterion"}" — e.g. something the candidate clarified about it after the interview.`}
+            rows={2}
+            className="mt-4 w-full resize-none border border-[#E8E8E3] bg-[#FAFAF8] px-3 py-2 text-xs text-[#111111] outline-none focus:border-[#0F5D5A]"
+          />
         </div>
       ))}
     </div>

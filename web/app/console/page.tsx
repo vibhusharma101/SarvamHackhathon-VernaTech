@@ -21,7 +21,7 @@ export default function ConsolePage() {
   const [scorecard, setScorecard] = useState<Scorecard | null>(null);
   const [latency, setLatency] = useState<SessionLatency | null>(null);
   const [turns, setTurns] = useState<SessionTurn[]>([]);
-  const [note, setNote] = useState<string | null>(null);
+  const [notes, setNotes] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const poll = () => api.listSessions().then(setSessions).catch(() => {});
@@ -37,7 +37,11 @@ export default function ConsolePage() {
     api.getScorecard(sessionId).then(setScorecard).catch(() => setScorecard(null));
     api.getLatency(sessionId).then(setLatency).catch(() => setLatency(null));
     api.getTurns(sessionId).then(setTurns).catch(() => setTurns([]));
-    api.getSessionNote(sessionId).then((r) => setNote(r.note)).catch(() => setNote(null));
+    api.getSessionNotes(sessionId).then(setNotes).catch(() => setNotes({}));
+  }, []);
+
+  const handleNoteChange = useCallback((criterionId: string, note: string) => {
+    setNotes((prev) => ({ ...prev, [criterionId]: note }));
   }, []);
 
   return (
@@ -59,16 +63,14 @@ export default function ConsolePage() {
         <section className="min-w-0 flex-1">
           {selectedId ? (
             <div className="flex flex-col gap-8 animate-slide-up-sm stagger">
-              <div className="flex items-start justify-between gap-6 pb-4 border-b border-[#E8E8E3]">
+              <div className="flex items-center justify-between gap-6 pb-4 border-b border-[#E8E8E3]">
                 <h2 className="text-2xl font-medium text-[#111111]">Scorecard</h2>
-                <div className="w-80 shrink-0">
-                  <RescoreButton sessionId={selectedId} initialNote={note} onRescored={() => loadDetail(selectedId)} />
-                </div>
+                <RescoreButton sessionId={selectedId} notes={notes} onRescored={() => loadDetail(selectedId)} />
               </div>
 
               {scorecard ? (
                 <div className="flex flex-col gap-10">
-                  <ScoreCard scorecard={scorecard} />
+                  <ScoreCard scorecard={scorecard} notes={notes} onNoteChange={handleNoteChange} />
                   <ProficiencyPanel proficiency={scorecard.language_proficiency} />
                   <div className="pt-8 border-t border-[#E8E8E3]">
                     <h4 className="text-xs font-mono tracking-widest uppercase text-[#8A8A8A] mb-4">Latency Measures</h4>

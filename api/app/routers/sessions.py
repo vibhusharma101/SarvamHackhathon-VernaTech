@@ -103,13 +103,13 @@ def get_turns(session_id: str):
     ]
 
 
-@router.get("/sessions/{session_id}/note")
-def get_session_note(session_id: str):
+@router.get("/sessions/{session_id}/notes")
+def get_session_notes(session_id: str):
+    """{criterion_id: note} — tagged per criterion, not one session-wide
+    blob. See app/routers/scoring.py's rescore endpoint for the write side."""
     db = get_client()
-    row = db.table("session").select("recruiter_note").eq("id", session_id).limit(1).execute()
-    if not row.data:
-        raise HTTPException(status_code=404, detail="session not found")
-    return {"note": row.data[0].get("recruiter_note")}
+    rows = db.table("criterion_note").select("criterion_id, note").eq("session_id", session_id).execute()
+    return {r["criterion_id"]: r["note"] for r in rows.data}
 
 
 @router.post("/sessions/{session_id}/upload")
