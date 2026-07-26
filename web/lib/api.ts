@@ -2,12 +2,15 @@
 // talks to Supabase directly — everything goes through here.
 
 import type {
+  CreateHarnessPairRequest,
   CreateSessionRequest,
   CreateSessionResponse,
   HarnessPairResult,
+  InterviewStartResponse,
   Scorecard,
   SessionLatency,
   SessionListItem,
+  SessionTurn,
   WritebackResult,
 } from "./types";
 
@@ -34,6 +37,10 @@ export const api = {
 
   getLatency: (sessionId: string) => request<SessionLatency>(`/sessions/${sessionId}/latency`),
 
+  getTurns: (sessionId: string) => request<SessionTurn[]>(`/sessions/${sessionId}/turns`),
+
+  startInterview: () => request<InterviewStartResponse>("/interview/start", { method: "POST" }),
+
   uploadFallbackAudio: async (sessionId: string, file: File) => {
     const res = await fetch(`${API_BASE}/sessions/${sessionId}/upload`, { method: "POST", body: file });
     if (!res.ok) throw new Error(`upload failed: ${res.status} ${await res.text()}`);
@@ -52,6 +59,9 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ profile_labels: profileLabels ?? null }),
     }),
+
+  createHarnessPair: (body: CreateHarnessPairRequest) =>
+    request<HarnessPairResult>("/harness/pairs", { method: "POST", body: JSON.stringify(body) }),
 
   getHarnessResults: () => request<HarnessPairResult[]>("/harness/results"),
 

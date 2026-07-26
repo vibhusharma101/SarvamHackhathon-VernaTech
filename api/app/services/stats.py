@@ -10,7 +10,7 @@ class HarnessStats:
     competence_mad: float | None
     max_observed_gap: float | None
     excluded_criteria_count: int
-    proficiency_delta: float
+    proficiency_delta: float | None
     english_run_variance: float
     vernacular_run_variance: float
 
@@ -18,8 +18,8 @@ class HarnessStats:
 def compute_harness_stats(
     english_scores: dict[str, float | None],  # criterion_id -> aggregated score (None if insufficient)
     vernacular_scores: dict[str, float | None],
-    english_fluency: int,
-    vernacular_fluency: int,
+    english_fluency: int | None,
+    vernacular_fluency: int | None,
     english_raw_runs: dict[str, list[int]],  # criterion_id -> the 3 raw run scores
     vernacular_raw_runs: dict[str, list[int]],
 ) -> HarnessStats:
@@ -40,11 +40,22 @@ def compute_harness_stats(
         per_criterion = [variance(runs) for runs in raw_runs.values() if len(runs) >= 2]
         return sum(per_criterion) / len(per_criterion) if per_criterion else 0.0
 
+    # A missing fluency score means the candidate produced no English to
+    # rate in that condition (see sarvam_llm.score_fluency). Differencing
+    # against a fabricated 0 would report a large, entirely invented
+    # proficiency gap — exactly the kind of number this project exists to
+    # not put on a slide. None means "not measurable", and says so.
+    proficiency_delta = (
+        english_fluency - vernacular_fluency
+        if english_fluency is not None and vernacular_fluency is not None
+        else None
+    )
+
     return HarnessStats(
         competence_mad=competence_mad,
         max_observed_gap=max_observed_gap,
         excluded_criteria_count=excluded,
-        proficiency_delta=english_fluency - vernacular_fluency,
+        proficiency_delta=proficiency_delta,
         english_run_variance=avg_variance(english_raw_runs),
         vernacular_run_variance=avg_variance(vernacular_raw_runs),
     )

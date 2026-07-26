@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import CORS_ORIGIN
-from app.routers import admin, harness, intent_ws, scoring, sessions, writeback, ws
+from app.routers import admin, harness, intent_ws, interview, scoring, sessions, writeback, ws
 
 app = FastAPI(title="Vernacular Technical Screening API")
 
@@ -22,6 +22,7 @@ app.include_router(harness.router)
 app.include_router(admin.router)
 app.include_router(ws.router)
 app.include_router(intent_ws.router)
+app.include_router(interview.router)
 
 
 @app.get("/health")

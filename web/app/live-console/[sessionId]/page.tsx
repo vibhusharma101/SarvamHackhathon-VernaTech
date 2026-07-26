@@ -97,7 +97,7 @@ export default function LiveConsolePage({ params }: { params: Promise<{ sessionI
                   <div>
                     <span className="font-medium text-zinc-700 dark:text-zinc-300">{feature.id}</span>
                     {feature.evidence_quote && (
-                      <span className="text-zinc-500"> — "{feature.evidence_quote}"</span>
+                      <span className="text-zinc-500"> — &ldquo;{feature.evidence_quote}&rdquo;</span>
                     )}
                     {!feature.evidence_quote && feature.improvement_note && (
                       <span className="text-zinc-400"> — {feature.improvement_note}</span>

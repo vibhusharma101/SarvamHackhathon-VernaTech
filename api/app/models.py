@@ -104,6 +104,12 @@ class RunHarnessRequest(BaseModel):
     profile_labels: Optional[list[str]] = None  # None = all seeded profiles
 
 
+class CreateHarnessPairRequest(BaseModel):
+    profile_label: str
+    english_session_id: str
+    vernacular_session_id: str
+
+
 # ---- Writeback ----
 
 class WritebackResult(BaseModel):
