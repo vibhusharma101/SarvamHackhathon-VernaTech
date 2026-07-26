@@ -7,12 +7,12 @@ import { ConsistencyBadge } from "./ConsistencyBadge";
 
 export function ScoreCard({ scorecard }: { scorecard: Scorecard }) {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-baseline justify-between">
-        <h3 className="text-lg font-semibold">
+    <div className="flex flex-col gap-6">
+      <div className="flex items-baseline justify-between pb-2">
+        <h3 className="text-xl font-medium text-[#111111]">
           {scorecard.overall !== null ? `${scorecard.overall.toFixed(1)} / 5` : "No scorable criteria yet"}
         </h3>
-        <span className="text-xs text-zinc-500">
+        <span className="text-xs text-[#8A8A8A]">
           {scorecard.criteria_scored} scored · {scorecard.criteria_insufficient} insufficient evidence
         </span>
       </div>
@@ -20,37 +20,41 @@ export function ScoreCard({ scorecard }: { scorecard: Scorecard }) {
       {scorecard.criteria.map((c) => (
         <div
           key={c.criterion_id}
-          className={`rounded-lg border p-4 ${
-            c.status === "insufficient_evidence"
-              ? "border-zinc-300 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900"
-              : "border-zinc-200 dark:border-zinc-800"
-          }`}
+          className="rounded-2xl p-6 bg-white border border-[#E8E8E3]"
         >
-          <div className="flex items-center justify-between">
-            <span className="font-medium">{c.rubric_criterion?.name ?? c.criterion_id}</span>
-            <div className="flex items-center gap-2">
-              <ConsistencyBadge lowConsistency={c.low_consistency} />
-              {c.status === "scored" ? (
-                <span className="font-mono text-sm">{c.score}/5</span>
-              ) : (
-                <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                  insufficient evidence
-                </span>
-              )}
-            </div>
-          </div>
-
           {c.status === "scored" ? (
-            <div className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
-              <blockquote className="border-l-2 border-zinc-300 pl-2 italic dark:border-zinc-700">
-                {c.evidence_quote_original ?? "—"}
-              </blockquote>
-              <blockquote className="border-l-2 border-zinc-300 pl-2 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
-                {c.evidence_quote_english ?? "—"}
-              </blockquote>
+            <div className="flex flex-col gap-4">
+              <div className="grid gap-6 sm:grid-cols-2">
+                <blockquote className="border-l-2 border-[#0F5D5A] pl-4 py-1.5 italic text-[#111111] my-2 bg-transparent">
+                  {c.evidence_quote_original ?? "—"}
+                </blockquote>
+                <blockquote className="border-l-2 border-[#0F5D5A] pl-4 py-1.5 italic text-[#111111] my-2 bg-transparent">
+                  {c.evidence_quote_english ?? "—"}
+                </blockquote>
+              </div>
+              <div className="flex items-center justify-between border-t border-[#E8E8E3] pt-4 mt-2">
+                <span className="text-sm text-[#111111] font-medium">{c.rubric_criterion?.name ?? c.criterion_id}</span>
+                <div className="flex items-center gap-3">
+                  <ConsistencyBadge lowConsistency={c.low_consistency} />
+                  <span className="font-mono text-[#5C5C5C]">
+                    {c.score} / 5
+                  </span>
+                </div>
+              </div>
             </div>
           ) : (
-            <p className="mt-2 text-sm text-zinc-500">{c.reason ?? "No reason recorded."}</p>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-[#111111] font-medium">{c.rubric_criterion?.name ?? c.criterion_id}</span>
+                <div className="flex items-center gap-2">
+                  <ConsistencyBadge lowConsistency={c.low_consistency} />
+                  <span className="text-xs text-[#8A8A8A]">
+                    insufficient evidence
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm text-[#5C5C5C] italic">{c.reason ?? "No reason recorded."}</p>
+            </div>
           )}
         </div>
       ))}

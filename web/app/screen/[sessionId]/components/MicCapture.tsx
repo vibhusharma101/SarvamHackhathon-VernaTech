@@ -20,7 +20,6 @@ export function MicCapture({ onFrame, active }: { onFrame: (frame: ArrayBuffer) 
         handleRef.current = handle;
       })
       .catch((err: unknown) => {
-        // C8 fallback: no mic permission -> caller should switch to FileUploadFallback.
         setError(err instanceof Error ? err.message : "microphone unavailable");
       });
 
@@ -31,13 +30,20 @@ export function MicCapture({ onFrame, active }: { onFrame: (frame: ArrayBuffer) 
   }, [active, onFrame]);
 
   if (error) {
-    return <p className="text-sm text-amber-700 dark:text-amber-400">Mic unavailable ({error}) — use file upload instead.</p>;
+    return (
+      <div className="flex items-center gap-2 text-sm text-[#C0392B] font-medium">
+        <span>⚠</span> Mic unavailable ({error}) — use file upload instead.
+      </div>
+    );
   }
 
   return (
-    <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-      <span className={`h-2 w-2 rounded-full ${active ? "bg-red-500 animate-pulse" : "bg-zinc-300 dark:bg-zinc-700"}`} />
-      {active ? "Listening…" : "Mic off"}
+    <div className="flex items-center gap-3 text-sm font-medium text-[#111111]">
+      <div className="relative flex h-2.5 w-2.5 items-center justify-center">
+        {active && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#0F5D5A] opacity-75"></span>}
+        <span className={`relative inline-flex h-2 w-2 rounded-full ${active ? "bg-[#0F5D5A]" : "bg-[#8A8A8A]"}`} />
+      </div>
+      {active ? "Listening intently…" : "Mic off"}
     </div>
   );
 }

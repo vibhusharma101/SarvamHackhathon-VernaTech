@@ -16,7 +16,7 @@ export function LanguagePicker({
   onChange: (lang: SpokenLanguage) => void;
 }) {
   return (
-    <div className="flex gap-3" role="radiogroup" aria-label="Choose screen language">
+    <div className="flex flex-wrap gap-4" role="radiogroup" aria-label="Choose screen language">
       {LANGUAGES.map((lang) => (
         <button
           key={lang.code}
@@ -24,10 +24,10 @@ export function LanguagePicker({
           role="radio"
           aria-checked={value === lang.code}
           onClick={() => onChange(lang.code)}
-          className={`rounded-full border px-5 py-2 text-sm font-medium transition-colors ${
+          className={`rounded-full border px-6 py-2.5 text-sm font-medium transition-colors ${
             value === lang.code
-              ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
-              : "border-zinc-300 text-zinc-700 hover:border-zinc-500 dark:border-zinc-700 dark:text-zinc-300"
+              ? "border-[#0F5D5A] bg-[#0F5D5A] text-[#FFFFFF]"
+              : "border-[#E8E8E3] bg-[#FFFFFF] text-[#5C5C5C] hover:border-[#111111] hover:text-[#111111]"
           }`}
         >
           {lang.label}

@@ -23,7 +23,7 @@ export function RescoreButton({ sessionId, onRescored }: { sessionId: string; on
           setBusy(false);
         }
       }}
-      className="rounded-full border border-zinc-300 px-4 py-1.5 text-sm font-medium disabled:opacity-50 dark:border-zinc-700"
+      className="border border-[#E8E8E3] hover:border-[#111111] text-[#111111] rounded-full text-xs px-3 py-1.5 font-medium transition-colors disabled:opacity-50"
     >
       {busy ? "Rescoring…" : "Rescore"}
     </button>

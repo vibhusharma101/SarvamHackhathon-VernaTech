@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vernacular Technical Screening",
-  description: "Score the engineering, not the English.",
+  title: "VernaTech — Vernacular Technical Screening",
+  description:
+    "Score the engineering, not the English. Evidence-based technical interviews that evaluate skill in any language.",
 };
 
 export default function RootLayout({
@@ -25,7 +26,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

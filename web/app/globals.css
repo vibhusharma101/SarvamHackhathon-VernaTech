@@ -1,26 +1,105 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ──────────────────────────────────────────────────────────────────────
+   RESEARCH PAPER DESIGN SYSTEM — Anthropic / Linear / Vercel Aesthetic
+   No colored cards, no heavy backgrounds, typography & whitespace first.
+   ────────────────────────────────────────────────────────────────────── */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* ── Backgrounds ── */
+  --color-paper-bg: #FAFAF8;
+  --color-paper-secondary: #F5F5F2;
+  --color-paper-elevated: #FFFFFF;
+
+  /* ── Text ── */
+  --color-text-primary: #111111;
+  --color-text-secondary: #5C5C5C;
+  --color-text-muted: #8A8A8A;
+
+  /* ── Borders ── */
+  --color-border-subtle: #E8E8E3;
+  --color-border: #E8E8E3;
+
+  /* ── Accent ── */
+  --color-accent: #0F5D5A;
+  --color-accent-hover: #0B4B48;
+  --color-accent-pressed: #083B39;
+  --color-accent-light: #EAF6F4;
+
+  /* ── Semantic Statuses ── */
+  --color-status-success: #0A7A53;
+  --color-status-warning: #C47A10;
+  --color-status-error: #C0392B;
+
+  /* ── Fonts ── */
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), 'IBM Plex Mono', monospace;
+  --font-serif: 'P22 Mackinac Pro', Georgia, serif;
+
+  /* ── Radii ── */
+  --radius-card: 16px;
+  --radius-pill: 9999px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Base Styles */
+html {
+  scroll-behavior: smooth;
+  background-color: #FAFAF8;
+  color: #111111;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #FAFAF8;
+  color: #111111;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography Defaults */
+h1, h2, h3, h4 {
+  color: #111111;
+  letter-spacing: -0.025em;
+  font-weight: 500;
+}
+
+/* Minimal Dividers */
+hr, .divider {
+  border: 0;
+  border-top: 1px solid #E8E8E3;
+}
+
+/* Quote Evidence Bar */
+.evidence-quote {
+  border-left: 2px solid #0F5D5A;
+  padding-left: 1rem;
+  font-style: italic;
+  color: #111111;
+}
+
+/* Focus outline */
+:focus-visible {
+  outline: 1.5px solid #0F5D5A;
+  outline-offset: 2px;
+}
+
+::selection {
+  background-color: #EAF6F4;
+  color: #0F5D5A;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #E8E8E3;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #8A8A8A;
 }

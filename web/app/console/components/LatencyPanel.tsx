@@ -11,27 +11,27 @@ const HOPS: { key: keyof Omit<SessionLatency, "session_id">; label: string }[] =
 ];
 
 export function LatencyPanel({ latency }: { latency: SessionLatency | null }) {
-  if (!latency) return <p className="text-sm text-zinc-400">No timed turns yet.</p>;
+  if (!latency) return <p className="text-sm text-[#8A8A8A]">No timed turns yet.</p>;
 
   return (
-    <table className="w-full text-sm">
+    <table className="w-full text-sm text-left">
       <thead>
-        <tr className="text-left text-xs uppercase text-zinc-500">
-          <th className="py-1">Hop</th>
-          <th className="py-1">Median</th>
-          <th className="py-1">Max</th>
-          <th className="py-1">n</th>
+        <tr className="text-xs uppercase text-[#8A8A8A]">
+          <th className="pb-3 font-normal">Hop</th>
+          <th className="pb-3 font-normal">Median</th>
+          <th className="pb-3 font-normal">Max</th>
+          <th className="pb-3 font-normal">n</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody className="divide-y divide-[#E8E8E3] border-t border-[#E8E8E3]">
         {HOPS.map(({ key, label }) => {
           const hop = latency[key];
           return (
-            <tr key={key} className="border-t border-zinc-100 dark:border-zinc-800">
-              <td className="py-1">{label}</td>
-              <td className="py-1 font-mono">{Math.round(hop.median_ms)}ms</td>
-              <td className="py-1 font-mono">{Math.round(hop.max_ms)}ms</td>
-              <td className="py-1 text-zinc-500">{hop.n}</td>
+            <tr key={key}>
+              <td className="py-3 text-[#111111]">{label}</td>
+              <td className="py-3 font-mono text-[#5C5C5C]">{Math.round(hop.median_ms)}ms</td>
+              <td className="py-3 font-mono text-[#5C5C5C]">{Math.round(hop.max_ms)}ms</td>
+              <td className="py-3 font-mono text-[#8A8A8A]">{hop.n}</td>
             </tr>
           );
         })}

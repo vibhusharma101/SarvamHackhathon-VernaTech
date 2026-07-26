@@ -9,21 +9,21 @@ import { InterviewSocket } from "@/lib/interviewWs";
 type Status = "connecting" | "ready" | "recording" | "processing" | "complete" | "error";
 
 const STATUS_COPY: Record<Status, string> = {
-  connecting: "Connecting…",
-  ready: "Ready",
-  recording: "Recording",
-  processing: "Processing…",
-  complete: "Complete",
-  error: "Error",
+  connecting: "Establishing secure connection…",
+  ready: "Ready when you are",
+  recording: "Recording actively",
+  processing: "Analyzing response…",
+  complete: "Session Complete",
+  error: "Connection Error",
 };
 
 const STATUS_DOT: Record<Status, string> = {
-  connecting: "bg-zinc-300 dark:bg-zinc-700",
-  ready: "bg-zinc-300 dark:bg-zinc-700",
-  recording: "bg-red-500",
-  processing: "bg-amber-500",
-  complete: "bg-emerald-500",
-  error: "bg-red-500",
+  connecting: "bg-[#E8E8E3]",
+  ready: "bg-[#0F5D5A]",
+  recording: "bg-[#C0392B]",
+  processing: "bg-[#0A7A53]",
+  complete: "bg-[#0F5D5A]",
+  error: "bg-[#C0392B]",
 };
 
 interface QuestionState {
@@ -58,8 +58,6 @@ export default function CandidatePage({ params }: { params: Promise<{ sessionId:
     });
     socket.onAck((ack) => {
       if (ack.status === "processing") setStatus("processing");
-      // "done" is immediately followed by the next question or the complete
-      // event — no separate UI state needed for it.
     });
     socket.onError((message) => {
       setStatus("error");
@@ -97,73 +95,80 @@ export default function CandidatePage({ params }: { params: Promise<{ sessionId:
   const isBusy = status === "connecting" || status === "processing";
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center gap-8 p-8">
-      <div className="text-center">
-        <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">Technical screen</p>
-        <p className="mt-1 text-xs text-zinc-400">{sessionId.slice(0, 8)}</p>
-      </div>
+    <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-10 bg-[#FAFAF8] p-8 text-[#111111] animate-fade-in">
+      <header className="text-center flex flex-col items-center gap-2">
+        <div className="font-mono text-[10px] uppercase tracking-widest text-[#5C5C5C]">
+          Technical screen
+        </div>
+        <p className="font-mono text-xs text-[#8A8A8A]">ID: {sessionId.slice(0, 8)}</p>
+      </header>
 
       {!started ? (
         <button
           type="button"
           onClick={startInterview}
-          className="rounded-full bg-black px-8 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-black"
+          className="mt-4 bg-[#0F5D5A] px-10 py-4 text-base font-medium text-white transition-colors hover:bg-[#0B4B48]"
         >
-          Start interview
+          Begin Technical Screen
         </button>
       ) : status === "complete" ? (
-        <div className="flex flex-col items-center gap-3 text-center">
-          <p className="text-lg font-medium">Interview complete</p>
-          <p className="text-sm text-zinc-500">
-            {scoringPassId ? "Your answers have been scored." : "Answers saved — scoring couldn't complete."}
+        <div className="flex flex-col items-center gap-4 text-center bg-[#FFFFFF] border border-[#E8E8E3] p-10 animate-slide-up">
+          <h2 className="font-serif text-2xl text-[#111111]">Screen Complete</h2>
+          <p className="text-base text-[#5C5C5C] max-w-sm">
+            {scoringPassId ? "Your responses have been successfully recorded and scored." : "Your responses were saved, but scoring could not complete."}
           </p>
-          {errorMessage && <p className="text-xs text-red-500">{errorMessage}</p>}
+          {errorMessage && <p className="text-sm text-[#C0392B] bg-[#F5F5F2] p-2 rounded w-full border border-[#E8E8E3]">{errorMessage}</p>}
           <button
             type="button"
             onClick={() => router.push("/console")}
-            className="mt-2 rounded-full border border-zinc-300 px-5 py-2 text-sm font-medium dark:border-zinc-700"
+            className="mt-6 border border-[#0F5D5A] text-[#0F5D5A] px-6 py-2.5 text-sm font-medium hover:bg-[#0F5D5A] hover:text-[#FFFFFF] transition-colors"
           >
-            View in recruiter console
+            Return to Recruiter Console
           </button>
         </div>
       ) : (
-        <>
+        <div className="flex w-full flex-col items-center gap-12 animate-slide-up-sm">
           {question && (
-            <div className="max-w-md text-center">
-              <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+            <div className="w-full max-w-lg text-center">
+              <div className="mb-4 flex items-center justify-center gap-2">
+                {Array.from({ length: question.total }).map((_, i) => (
+                  <div key={i} className={`h-1 transition-all ${i === question.idx ? "w-8 bg-[#111111]" : i < question.idx ? "w-3 bg-[#5C5C5C]" : "w-3 bg-[#E8E8E3]"}`} />
+                ))}
+              </div>
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-widest text-[#5C5C5C] mb-3">
                 Question {question.idx + 1} of {question.total}
               </p>
-              <p className="mt-2 text-base leading-relaxed">{question.text}</p>
+              <h3 className="font-serif text-2xl leading-relaxed text-[#111111]">{question.text}</h3>
             </div>
           )}
 
-          <div className="relative flex h-28 w-28 items-center justify-center">
-            {isRecording && <span className="absolute inset-0 animate-ping rounded-full bg-red-500/30" />}
+          <div className="relative flex h-32 w-32 items-center justify-center">
+            {isRecording && <span className="absolute inset-0 animate-ping rounded-full bg-[#C0392B]/20" />}
             <button
               type="button"
               onClick={toggleRecording}
               disabled={isBusy || !question}
               aria-label={isRecording ? "Stop recording" : "Start recording"}
-              className={`relative flex h-24 w-24 items-center justify-center rounded-full transition-colors disabled:opacity-40 ${
-                isRecording ? "bg-red-500" : "bg-black dark:bg-white"
+              className={`relative flex h-24 w-24 items-center justify-center rounded-full transition-all disabled:opacity-40 ${
+                isRecording ? "bg-[#C0392B]" : "bg-[#0F5D5A]"
               }`}
             >
               {isRecording ? (
-                <span className="h-6 w-6 rounded-sm bg-white" />
+                <span className="h-8 w-8 rounded-sm bg-[#FFFFFF]" />
               ) : (
-                <span className="h-5 w-5 rounded-full bg-white dark:bg-black" />
+                <span className="h-8 w-8 rounded-full bg-[#FFFFFF]" />
               )}
             </button>
           </div>
 
-          <div className="flex flex-col items-center gap-1.5">
-            <div className="flex items-center gap-2">
-              <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[status]}`} />
-              <span className="text-sm text-zinc-600 dark:text-zinc-400">{STATUS_COPY[status]}</span>
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2.5 bg-[#FFFFFF] px-4 py-1.5 border border-[#E8E8E3] rounded-full">
+              <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]} ${isRecording || status === "processing" ? "animate-pulse" : ""}`} />
+              <span className="text-sm font-medium text-[#111111]">{STATUS_COPY[status]}</span>
             </div>
-            {status === "error" && <p className="min-h-[1.25rem] text-xs text-red-500">{errorMessage}</p>}
+            {status === "error" && <p className="min-h-[1.25rem] text-sm text-[#C0392B] font-medium mt-2">{errorMessage}</p>}
           </div>
-        </>
+        </div>
       )}
     </main>
   );

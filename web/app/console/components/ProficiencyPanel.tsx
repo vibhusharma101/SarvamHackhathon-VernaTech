@@ -5,24 +5,30 @@ import type { LanguageProficiencyResult } from "@/lib/types";
 
 export function ProficiencyPanel({ proficiency }: { proficiency: LanguageProficiencyResult | null }) {
   return (
-    <div className="mt-6 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-      <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Recorded, not scored</h4>
+    <div className="pt-8 border-t border-[#E8E8E3]">
+      <h4 className="text-xs font-mono uppercase tracking-widest text-[#8A8A8A] mb-4">Recorded, not scored</h4>
       {!proficiency ? (
-        <p className="mt-2 text-sm text-zinc-400">Not yet computed for this session.</p>
+        <p className="text-sm text-[#5C5C5C]">Not yet computed for this session.</p>
       ) : proficiency.english_fluency === null ? (
         // Not a gap to fill in — the candidate produced no English to rate.
         // Showing a number here would be inventing one.
-        <div className="mt-2 text-sm">
-          <span className="text-zinc-500">English fluency: not assessed</span>
+        <div className="flex flex-col gap-2">
+          <span className="text-sm text-[#111111]">English fluency: <span className="text-[#8A8A8A] italic">not assessed</span></span>
           {proficiency.disfluency_notes && (
-            <p className="mt-1 text-xs text-zinc-400">{proficiency.disfluency_notes}</p>
+            <p className="text-sm text-[#5C5C5C] pl-3 border-l-2 border-[#E8E8E3]">
+              {proficiency.disfluency_notes}
+            </p>
           )}
         </div>
       ) : (
-        <div className="mt-2 text-sm">
-          <span>English fluency: {proficiency.english_fluency}/5</span>
+        <div className="flex flex-col gap-2">
+          <span className="text-sm text-[#111111]">
+            English fluency: <span className="font-mono text-[#5C5C5C] ml-2">{proficiency.english_fluency} / 5</span>
+          </span>
           {proficiency.disfluency_notes && (
-            <p className="mt-1 text-xs text-zinc-500">{proficiency.disfluency_notes}</p>
+            <p className="text-sm text-[#5C5C5C] pl-3 border-l-2 border-[#E8E8E3]">
+              {proficiency.disfluency_notes}
+            </p>
           )}
         </div>
       )}
