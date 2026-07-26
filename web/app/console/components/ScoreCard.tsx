@@ -2,8 +2,13 @@ import type { Scorecard } from "@/lib/types";
 
 import { ConsistencyBadge } from "./ConsistencyBadge";
 
-// R2 (TRD §6.2): original-language quote and English gloss side by side.
 // R3: refusal rendered distinctly from a low score — grey, never red.
+//
+// R2 originally called for the original-language quote next to the English
+// gloss, but that's never populated — the scorer only ever sees the English
+// gloss and quotes from that, so evidence_quote_original is permanently
+// null. Showing just the one real quote instead of a dash placeholder for
+// data that doesn't exist.
 //
 // Each criterion carries its own recruiter note (tagged to that specific
 // criterion_id, not the whole session) — persisted and reused on every
@@ -36,14 +41,9 @@ export function ScoreCard({
         >
           {c.status === "scored" ? (
             <div className="flex flex-col gap-4">
-              <div className="grid gap-6 sm:grid-cols-2">
-                <blockquote className="border-l-2 border-[#0F5D5A] pl-4 py-1.5 italic text-[#111111] my-2 bg-transparent">
-                  {c.evidence_quote_original ?? "—"}
-                </blockquote>
-                <blockquote className="border-l-2 border-[#0F5D5A] pl-4 py-1.5 italic text-[#111111] my-2 bg-transparent">
-                  {c.evidence_quote_english ?? "—"}
-                </blockquote>
-              </div>
+              <blockquote className="border-l-2 border-[#0F5D5A] pl-4 py-1.5 italic text-[#111111] my-2 bg-transparent">
+                {c.evidence_quote_english ?? "—"}
+              </blockquote>
               <div className="flex items-center justify-between border-t border-[#E8E8E3] pt-4 mt-2">
                 <span className="text-sm text-[#111111] font-medium">{c.rubric_criterion?.name ?? c.criterion_id}</span>
                 <div className="flex items-center gap-3">

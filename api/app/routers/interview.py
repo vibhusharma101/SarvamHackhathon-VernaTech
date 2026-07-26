@@ -14,6 +14,7 @@ read it back. Explicit scope decision for the hackathon, not an oversight.
 import asyncio
 import json
 import logging
+import re
 import time
 import uuid
 from datetime import datetime, timezone
@@ -47,6 +48,24 @@ QUESTIONS = [
     "Tell me about a technical trade-off you made. What did you choose, what "
     "was the alternative, and what was the cost of your decision?",
 ]
+
+_DEVANAGARI_RE = re.compile(r"[ऀ-ॿ]")
+_MIN_WORDS_PER_SCRIPT = 3  # a stray acronym or product name isn't code-switching
+
+
+def _detect_display_language(original_text: str, language_code: str) -> str:
+    """Sarvam's language_code is always a single value — it has no way to
+    say "code-mixed", so genuine Hinglish speech just gets bucketed into
+    whichever script had more words. Detected here instead, straight from
+    the transcript: if both Devanagari and Latin-script words show up in
+    real quantity (not just one stray English acronym), label it
+    "hinglish" for display/storage, overriding Sarvam's single guess."""
+    words = original_text.split()
+    devanagari_words = sum(1 for w in words if _DEVANAGARI_RE.search(w))
+    latin_words = sum(1 for w in words if sum(c.isascii() and c.isalpha() for c in w) >= 2)
+    if devanagari_words >= _MIN_WORDS_PER_SCRIPT and latin_words >= _MIN_WORDS_PER_SCRIPT:
+        return "hinglish"
+    return language_code
 
 
 @router.post("/interview/start")
@@ -237,6 +256,7 @@ async def interview_stream(websocket: WebSocket, session_id: str):
                     translate_speech_to_english(audio_bytes),
                     transcribe_speech_original(audio_bytes),
                 )
+                language_code = _detect_display_language(original_text, language_code)
                 t_asr_final = time.time()
                 await asyncio.to_thread(
                     _persist_turn,
