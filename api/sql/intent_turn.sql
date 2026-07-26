@@ -11,11 +11,12 @@ create table if not exists intent_turn (
   language_code text,
   english_text text,
   intent jsonb,
+  verdict jsonb,
   created_at timestamptz default now(),
   unique (session_id, turn_idx)
 );
 
--- Safe to re-run: adds the original-language columns if this table was
--- created before they existed.
+-- Safe to re-run: adds columns if this table was created before they existed.
 alter table intent_turn add column if not exists original_text text;
 alter table intent_turn add column if not exists language_code text;
+alter table intent_turn add column if not exists verdict jsonb;

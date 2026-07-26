@@ -121,6 +121,32 @@ class StructuredIntent(BaseModel):
     category: str
 
 
+# ---- Verdict layer (hacky, tuned to the 5-prompt demo — see sarvam_verdict.py) ----
+
+class FeatureResult(BaseModel):
+    id: str
+    status: Literal["yes", "no", "not_addressed"]
+    evidence_quote: Optional[str] = None
+    reason: str
+    improvement_note: Optional[str] = None
+
+
+class CategoryVerdict(BaseModel):
+    category: str
+    verdict: Literal["pass", "fail"]
+    features_yes: int
+    features_no: int
+    features_not_addressed: int
+    summary: str
+    features: list[FeatureResult]
+
+
+class SessionVerdict(BaseModel):
+    overall_verdict: Literal["advance", "do_not_advance"]
+    categories_passed: int
+    categories_total: int
+
+
 class IntentBroadcast(BaseModel):
     type: Literal["intent"] = "intent"
     session_id: str
@@ -129,3 +155,5 @@ class IntentBroadcast(BaseModel):
     language_code: str
     english_text: str
     intent: StructuredIntent
+    category_verdict: CategoryVerdict
+    session_verdict: SessionVerdict

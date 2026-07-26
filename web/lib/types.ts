@@ -107,6 +107,32 @@ export interface StructuredIntent {
   category: string;
 }
 
+// ---- Verdict layer (hacky, tuned to the 5-prompt demo) ----
+
+export interface FeatureResult {
+  id: string;
+  status: "yes" | "no" | "not_addressed";
+  evidence_quote: string | null;
+  reason: string;
+  improvement_note: string | null;
+}
+
+export interface CategoryVerdict {
+  category: string;
+  verdict: "pass" | "fail";
+  features_yes: number;
+  features_no: number;
+  features_not_addressed: number;
+  summary: string;
+  features: FeatureResult[];
+}
+
+export interface SessionVerdict {
+  overall_verdict: "advance" | "do_not_advance";
+  categories_passed: number;
+  categories_total: number;
+}
+
 export interface IntentBroadcast {
   type: "intent";
   session_id: string;
@@ -115,6 +141,8 @@ export interface IntentBroadcast {
   language_code: string;
   english_text: string;
   intent: StructuredIntent;
+  category_verdict: CategoryVerdict;
+  session_verdict: SessionVerdict;
 }
 
 export type CandidateAck =
