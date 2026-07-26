@@ -1,0 +1,10 @@
+fastapi
+python-multipart
+uvicorn[standard]
+pipecat-ai[sarvam]
+python-dotenv
+supabase
+websockets
+numpy
+pydantic
+httpx

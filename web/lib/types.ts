@@ -1,0 +1,99 @@
+// Hand-synced with api/app/models.py — no codegen today (TRD §10).
+
+export type LanguageCondition = "english" | "vernacular";
+export type ScoreStatus = "scored" | "insufficient_evidence";
+export type SpokenLanguage = "en-IN" | "hi-IN" | "te-IN";
+
+export interface CreateSessionRequest {
+  candidate_id: string;
+  role_id: string;
+  language_condition: LanguageCondition;
+  spoken_language: SpokenLanguage;
+}
+
+export interface CreateSessionResponse {
+  session_id: string;
+}
+
+export interface SessionListItem {
+  id: string;
+  candidate: { name: string } | null;
+  role: { title: string } | null;
+  spoken_language: SpokenLanguage;
+  language_condition: LanguageCondition;
+  started_at: string;
+}
+
+export interface CriterionResult {
+  criterion_id: string;
+  rubric_criterion?: { name: string };
+  status: ScoreStatus;
+  score: number | null; // 1-5, NEVER 0. null when insufficient.
+  evidence_quote_original: string | null;
+  evidence_quote_english: string | null;
+  reason: string | null;
+  low_consistency: boolean;
+}
+
+export interface LanguageProficiencyResult {
+  english_fluency: number; // 1-5
+  disfluency_notes: string | null;
+}
+
+export interface Scorecard {
+  session_id: string;
+  scoring_pass_id: string;
+  criteria: CriterionResult[];
+  criteria_scored: number;
+  criteria_insufficient: number;
+  overall: number | null;
+  language_proficiency: LanguageProficiencyResult | null;
+}
+
+export interface HopLatency {
+  median_ms: number;
+  max_ms: number;
+  n: number;
+}
+
+export interface SessionLatency {
+  session_id: string;
+  speech_end_to_asr_final: HopLatency;
+  asr_final_to_llm_first_token: HopLatency;
+  llm_first_token_to_tts_first_byte: HopLatency;
+  tts_first_byte_to_playback_start: HopLatency;
+}
+
+export interface HarnessPairResult {
+  id: string;
+  profile_label: string;
+  english_session_id: string;
+  vernacular_session_id: string;
+  competence_mad: number | null;
+  max_observed_gap: number | null;
+  proficiency_delta: number | null;
+  english_run_variance: number | null;
+  vernacular_run_variance: number | null;
+  runs_per_session: number;
+}
+
+export interface WritebackResult {
+  beeceptor_status: number;
+  slack_status: number | null;
+  payload: Record<string, unknown>;
+}
+
+// ---- WS protocol (TRD §4) ----
+
+export type ClientEvent =
+  | { type: "start"; session_id: string; language: SpokenLanguage }
+  | { type: "clarification_request" }
+  | { type: "end" };
+
+export type ServerEvent =
+  | { type: "transcript"; text: string; is_final: boolean; turn_idx: number }
+  | { type: "agent_speaking"; text: string; audio_b64: string }
+  | { type: "barge_in_ack" }
+  | { type: "turn_complete"; turn_idx: number }
+  | { type: "screen_complete"; session_id: string }
+  | { type: "error"; code: string; recoverable: boolean };
