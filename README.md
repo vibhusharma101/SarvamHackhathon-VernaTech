@@ -16,10 +16,25 @@ one to build from). This README covers setup only.
   talks to Supabase through the FastAPI REST contract only, never directly (TRD §1).
 - **Writeback** — Beeceptor (mocked ATS) + Slack webhook
 
+## Live deployment
+
+| Service | URL |
+|---|---|
+| Frontend (Vercel) | https://vernacular-screening-web.vercel.app |
+| Backend (Railway) | https://vernacular-screening-api-production.up.railway.app |
+
+Deployed as bare skeletons — **no `SARVAM_API_KEY` or Supabase project is configured yet**, so `/health` is up
+but every DB-backed route (`/sessions`, `/harness/results`, scoring, writeback) returns 500 until real
+credentials are set in Railway (`railway variable set KEY=VALUE --service vernacular-screening-api`). CORS is
+already configured both ways (Railway's `CORS_ORIGIN` points at the Vercel URL above; the Vercel env vars
+`NEXT_PUBLIC_API_BASE` / `NEXT_PUBLIC_WS_BASE` point at the Railway URL above), and `POST /admin/reset` is
+gated behind an `ADMIN_TOKEN` generated at deploy time (ask whoever ran the deploy for it — it isn't
+committed anywhere).
+
 ## Current state of this scaffold
 
-This is the runnable skeleton, not a finished build. Both apps boot and serve their base routes with no external
-credentials. What's implemented vs. stubbed:
+This is the runnable skeleton, not a finished build. Both apps boot, are deployed, and serve their base routes
+with no external voice/DB credentials. What's implemented vs. stubbed:
 
 | Area | Status |
 |---|---|
@@ -30,7 +45,7 @@ credentials. What's implemented vs. stubbed:
 | Next.js pages (`/screen/[sessionId]`, `/console`, `/harness`) and components | Implemented against the typed API/WS clients |
 | Live mic capture → PCM streaming | Implemented (`lib/audio.ts`) but untested against a live WS backend |
 | Three paired profiles' audio (PRD §10) | Not recorded — do this before 12:00 per the PRD |
-| Deployment (Vercel/Railway) | Not done |
+| Deployment (Vercel/Railway) | **Done** — skeletons live, no app credentials configured yet |
 
 See `.vii/plan.md` for the full scope note on what this scaffolding pass covered.
 

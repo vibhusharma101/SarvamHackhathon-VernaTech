@@ -4,6 +4,8 @@ api/__pycache__/
 api/**/__pycache__/
 *.pyc
 api/.env
+*.local
+.railway/
 
 # Node (web/) — web/.gitignore also covers this, kept here for root-level safety
 web/node_modules/
